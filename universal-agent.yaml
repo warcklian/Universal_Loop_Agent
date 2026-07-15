@@ -1,0 +1,106 @@
+project:
+  name: "Universal Loop Agent"
+  description: "Universal agent config generator. Edit this YAML, run `uagent generate`, load AGENTS.md in your agent."
+  stack:
+    languages: [typescript]
+    runtime: [bun]
+    package_managers: [bun]
+
+build:
+  install: "bun install"
+  dev: "bun run dev"
+  build: "bun run build"
+  lint: "bun run lint"
+  typecheck: "bun run typecheck"
+
+testing:
+  unit: "bun test"
+  e2e: "bun test:e2e"
+  coverage: "bun test:coverage"
+
+code_style:
+  indent: 2
+  quotes: double
+  semicolons: true
+  max_line_length: 100
+  conventions:
+    - "Use TypeScript strict mode"
+    - "Prefer functional patterns over classes"
+    - "Keep functions small and focused"
+    - "Use descriptive variable and function names"
+
+security:
+  rules:
+    - "Never commit secrets or API keys"
+    - "Validate all user input"
+    - "Use environment variables for configuration"
+
+git:
+  commit_format: conventional
+  branch_format: "{type}/{ticket}-{description}"
+  rules:
+    - "Write meaningful commit messages"
+    - "Keep commits atomic and focused"
+
+agent_loop:
+  enabled: true
+  max_iterations: 15
+  timeout_seconds: 300
+  doom_loop_detection: true
+  rules:
+    - instruction: "Always read files before editing them"
+      description: "Never edit blind — understand the current state first"
+    - instruction: "Run tests after every change"
+      description: "Verify correctness immediately"
+    - instruction: "Run linter and type checker after edits"
+      description: "Catch errors early"
+    - instruction: "If no progress in 3 iterations, stop and ask the user"
+      description: "Prevent doom loops"
+    - instruction: "Explain what you changed and why"
+      description: "Always report back with a summary"
+
+multi_agent:
+  enabled: true
+  memory:
+    enabled: true
+    path: ".uagent/memory/"
+    auto_sync: true
+  ownership:
+    - agent: "core"
+      globs: ["src/schema.ts", "src/parser.ts", "src/generator.ts", "src/cli.ts"]
+    - agent: "sections"
+      globs: ["src/sections/**"]
+      integrator: true
+  conflict:
+    file_locking: true
+    auto_detect: true
+    strategy: topological
+
+rules:
+  - name: "Schema Types"
+    glob: "src/schema.ts"
+    instructions: |
+      Single source of truth for all types.
+      All other files must import from here.
+      Never duplicate type definitions.
+
+  - name: "Section Generators"
+    glob: "src/sections/**"
+    instructions: |
+      Each section function returns string | null.
+      Return null if the section has no content.
+      Never return empty strings.
+
+  - name: "Generator"
+    glob: "src/generator.ts"
+    instructions: |
+      Orchestrates all sections into a single AGENTS.md.
+      Sections are joined with double newlines.
+      Never modify the output format — consumers depend on it.
+
+universal_instructions: |
+  This project generates a single AGENTS.md file.
+  Edit universal-agent.yaml to configure everything.
+  Run `uagent generate` to regenerate.
+  Load AGENTS.md in your agent to activate loop mode.
+  Work without the file for normal prompt mode.

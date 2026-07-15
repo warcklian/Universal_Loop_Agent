@@ -1,0 +1,26 @@
+{
+  "name": "uagent",
+  "version": "0.1.0",
+  "description": "Generate AGENTS_LOOP.md from a single YAML — works with any AI code editor",
+  "module": "src/cli.ts",
+  "type": "module",
+  "bin": {
+    "uagent": "./src/cli.ts"
+  },
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "bun build src/cli.ts --compile --outfile dist/uagent",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "yaml": "^2.9.0"
+  }
+}
