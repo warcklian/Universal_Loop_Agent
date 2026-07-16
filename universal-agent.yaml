@@ -1,6 +1,6 @@
 project:
   name: "Universal Loop Agent"
-  description: "Universal agent config generator. Edit this YAML, run `uagent generate`, load AGENTS.md in your agent."
+  description: "Universal agent config generator — auto-adapts to any project stack"
   stack:
     languages: [typescript]
     runtime: [bun]
@@ -99,7 +99,7 @@ rules:
       Never modify the output format — consumers depend on it.
 
 universal_instructions: |
-  This project generates a single AGENTS.md file.
+  Universal agent config generator — auto-adapts to any project stack.
   Edit universal-agent.yaml to configure everything.
   Run `uagent generate` to regenerate.
   Load AGENTS.md in your agent to activate loop mode.

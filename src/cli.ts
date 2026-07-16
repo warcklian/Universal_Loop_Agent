@@ -2,24 +2,80 @@
 
 import { Command } from "commander"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
-import { dirname, resolve } from "node:path"
+import { dirname, resolve, join } from "node:path"
 import { parseSource, ParseError } from "./parser.ts"
 import { generate } from "./generator.ts"
+import { detectProject } from "./detector.ts"
+import { writeYaml } from "./yaml-generator.ts"
+import { initMemory, ensureMemory } from "./memory.ts"
 
 const program = new Command()
 
 program
   .name("uagent")
-  .description("Generate AGENTS_LOOP.md from universal-agent.yaml")
+  .description("Universal agent config generator — adaptative to any project")
   .version("0.1.0")
 
 program
+  .command("init")
+  .description("Initialize uagent for the parent project (auto-detect stack)")
+  .argument("[target]", "Target project directory (default: parent of uagent folder)", "..")
+  .option("--skip-memory", "Skip memory initialization")
+  .option("--skip-yaml", "Skip YAML generation (keep existing universal-agent.yaml)")
+  .action((target: string, opts: { skipMemory?: boolean; skipYaml?: boolean }) => {
+    const targetDir = resolve(target)
+    console.log(`\n  Scanning project: ${targetDir}\n`)
+
+    const project = detectProject(targetDir)
+
+    console.log(`  Project:  ${project.name}`)
+    console.log(`  Langs:    ${project.languages.join(", ") || "none detected"}`)
+    console.log(`  Frameworks: ${project.frameworks.join(", ") || "none detected"}`)
+    console.log(`  Runtime:  ${project.runtime.join(", ") || "none detected"}`)
+    console.log(`  Pkg mgr:  ${project.packageManagers.join(", ") || "none detected"}`)
+    console.log(`  Databases: ${project.databases.join(", ") || "none detected"}`)
+    console.log(`  Git:      ${project.hasGit ? "yes" : "no"}`)
+    console.log()
+
+    if (!opts.skipYaml) {
+      const yamlPath = join(targetDir, "universal-agent.yaml")
+      if (existsSync(yamlPath)) {
+        console.log(`  universal-agent.yaml already exists — skipping (use --force to overwrite)`)
+      } else {
+        writeYaml(targetDir, project)
+        console.log(`  Created universal-agent.yaml`)
+      }
+    }
+
+    if (!opts.skipMemory) {
+      initMemory(targetDir, project)
+    }
+
+    console.log(`\n  Done! Next steps:`)
+    console.log(`  1. Edit universal-agent.yaml if needed`)
+    console.log(`  2. Run: uagent generate`)
+    console.log(`  3. Load AGENTS.md in your AI editor\n`)
+  })
+
+program
+  .command("detect")
+  .description("Detect project stack without generating files")
+  .argument("[target]", "Target project directory", "..")
+  .action((target: string) => {
+    const targetDir = resolve(target)
+    const project = detectProject(targetDir)
+
+    console.log(JSON.stringify(project, null, 2))
+  })
+
+program
   .command("generate")
-  .description("Generate AGENTS_LOOP.md")
+  .description("Generate AGENTS.md from universal-agent.yaml")
   .argument("[source]", "Path to source YAML", "universal-agent.yaml")
   .option("-o, --output <dir>", "Output directory", ".")
   .option("--dry-run", "Print without writing")
-  .action((source: string, opts: { output: string; dryRun?: boolean }) => {
+  .option("--init-memory", "Create .uagent/memory/ if missing")
+  .action((source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean }) => {
     try {
       const config = parseSource(source)
       const result = generate(config)
@@ -35,6 +91,11 @@ program
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
       writeFileSync(outPath, result.content, "utf-8")
       console.log(`Generated ${result.file} for: ${config.project.name}`)
+
+      if (opts.initMemory && config.multi_agent?.memory?.enabled) {
+        const project = detectProject(resolve("."))
+        ensureMemory(resolve("."), project)
+      }
     } catch (e) {
       if (e instanceof ParseError) {
         console.error(`Error: ${e.message}`)
