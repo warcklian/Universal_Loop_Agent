@@ -1,7 +1,7 @@
 {
   "name": "uagent",
   "version": "0.1.0",
-  "description": "Generate AGENTS_LOOP.md from a single YAML — works with any AI code editor",
+  "description": "Universal agent config generator — auto-adapts to any project stack",
   "module": "src/cli.ts",
   "type": "module",
   "bin": {
@@ -11,7 +11,9 @@
   "scripts": {
     "dev": "bun run src/cli.ts",
     "build": "bun build src/cli.ts --compile --outfile dist/uagent",
-    "test": "bun test"
+    "test": "bun test",
+    "lint": "bun x tsc --noEmit",
+    "typecheck": "bun x tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest"
