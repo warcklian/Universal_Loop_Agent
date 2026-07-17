@@ -26,7 +26,7 @@ if not exist "..\universal-agent.yaml" (
 
 echo  Generating AGENTS.md...
 echo.
-call bun run src/cli.ts generate ../universal-agent.yaml -o ..
+call bun run src/cli.ts generate ../universal-agent.yaml -o .. --force
 
 echo.
 if %errorlevel% equ 0 (
