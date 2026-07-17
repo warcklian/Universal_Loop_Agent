@@ -8,6 +8,18 @@ Universal agent config generator. Edit one YAML, generate `AGENTS.md` compatible
 
 ## Quick start
 
+### Option 1: Using .bat files (Windows)
+
+```bash
+# Initialize (auto-detects project, creates universal-agent.yaml)
+init.bat
+
+# Generate AGENTS.md
+generate.bat
+```
+
+### Option 2: Using CLI
+
 ```bash
 # Install
 npm install -g uagent
@@ -100,8 +112,31 @@ agent_loop:
     - instruction: "If no progress in 3 iterations, stop and ask"
 ```
 
-**Prompt mode**: Work without loading `AGENTS.md` — no loop behavior.
-**Loop mode**: Load `AGENTS.md` in your agent — loop activates.
+### Using the Agent Loop
+
+**Prompt mode (default)**: Work normally — no loop behavior activates.
+
+**Loop mode**: Load `AGENTS.md` in your agent to activate. The agent will follow the loop rules defined in your config.
+
+**How to activate per editor:**
+
+| Editor | How to activate |
+|--------|-----------------|
+| OpenCode | Auto-detected — just load the project |
+| Cursor | Auto-detected — AGENTS.md in project root |
+| GitHub Copilot | Auto-detected via `.github/copilot-instructions.md` referencing AGENTS.md |
+| Claude Code | Add to `CLAUDE.md`: `@AGENTS.md` |
+| Windsurf | Auto-detected |
+| Cline | Auto-detected |
+| Roo Code | Auto-detected |
+
+**What the loop does:**
+- Agent reads files before editing
+- Runs tests after changes
+- Stops if no progress in 3 iterations (doom loop detection)
+- Reports what was changed and why
+
+**To disable loop**: Delete or rename `AGENTS.md`, or set `agent_loop.enabled: false` in your YAML.
 
 ## Multi-Agent
 
