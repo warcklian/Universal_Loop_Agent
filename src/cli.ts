@@ -3,11 +3,22 @@
 import { Command } from "commander"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { dirname, resolve, join } from "node:path"
+import * as readline from "node:readline"
 import { parseSource, ParseError } from "./parser.ts"
 import { generate } from "./generator.ts"
 import { detectProject } from "./detector.ts"
 import { writeYaml } from "./yaml-generator.ts"
 import { initMemory, ensureMemory } from "./memory.ts"
+
+function askConfirmation(question: string): Promise<boolean> {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise((resolve) => {
+    rl.question(`  ${question} (y/N): `, (answer) => {
+      rl.close()
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes")
+    })
+  })
+}
 
 const program = new Command()
 
@@ -75,7 +86,8 @@ program
   .option("-o, --output <dir>", "Output directory", ".")
   .option("--dry-run", "Print without writing")
   .option("--init-memory", "Create .uagent/memory/ if missing")
-  .action((source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean }) => {
+  .option("--force", "Overwrite existing AGENTS.md without asking")
+  .action(async (source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean; force?: boolean }) => {
     try {
       const config = parseSource(source)
       const result = generate(config)
@@ -85,6 +97,14 @@ program
         console.log(`\n--- ${outPath} ---\n`)
         console.log(result.content)
         return
+      }
+
+      if (existsSync(outPath) && !opts.force) {
+        const overwrite = await askConfirmation(`${result.file} already exists. Overwrite?`)
+        if (!overwrite) {
+          console.log(`  Skipped ${result.file}`)
+          return
+        }
       }
 
       const dir = dirname(outPath)
