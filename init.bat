@@ -16,6 +16,17 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+echo  Checking dependencies...
+if not exist "node_modules" (
+    echo  Installing dependencies...
+    call bun install
+    if %errorlevel% neq 0 (
+        echo  [ERROR] Failed to install dependencies.
+        pause
+        exit /b 1
+    )
+)
+
 echo  Detecting project stack...
 echo.
 call bun run src/cli.ts init ..
