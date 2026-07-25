@@ -64,8 +64,14 @@ export interface AgentLoopConfig {
 
 export interface MemoryConfig {
   enabled?: boolean
+  /** Folder for multi-agent stubs (pointers). Default: .uagent/memory/ */
   path?: string
   auto_sync?: boolean
+  /**
+   * Canonical portable handoff Markdown at project root.
+   * Default: MEMORIA_PROYECTO.md — agents must read/update this file, not only .uagent stubs.
+   */
+  canonical_file?: string
 }
 
 export interface OwnershipEntry {

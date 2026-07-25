@@ -8,6 +8,18 @@ Universal agent config generator. Edit one YAML, generate `AGENTS.md` compatible
 
 ## Quick start
 
+### Option 1: Using .bat files (Windows)
+
+```bash
+# Initialize (auto-detects project, creates universal-agent.yaml)
+init.bat
+
+# Generate AGENTS.md
+generate.bat
+```
+
+### Option 2: Using CLI
+
 ```bash
 # Install
 npm install -g uagent
@@ -100,8 +112,31 @@ agent_loop:
     - instruction: "If no progress in 3 iterations, stop and ask"
 ```
 
-**Prompt mode**: Work without loading `AGENTS.md` — no loop behavior.
-**Loop mode**: Load `AGENTS.md` in your agent — loop activates.
+### Using the Agent Loop
+
+**Prompt mode (default)**: Work normally — no loop behavior activates.
+
+**Loop mode**: Load `AGENTS.md` in your agent to activate. The agent will follow the loop rules defined in your config.
+
+**How to activate per editor:**
+
+| Editor | How to activate |
+|--------|-----------------|
+| OpenCode | Auto-detected — just load the project |
+| Cursor | Auto-detected — AGENTS.md in project root |
+| GitHub Copilot | Auto-detected via `.github/copilot-instructions.md` referencing AGENTS.md |
+| Claude Code | Add to `CLAUDE.md`: `@AGENTS.md` |
+| Windsurf | Auto-detected |
+| Cline | Auto-detected |
+| Roo Code | Auto-detected |
+
+**What the loop does:**
+- Agent reads files before editing
+- Runs tests after changes
+- Stops if no progress in 3 iterations (doom loop detection)
+- Reports what was changed and why
+
+**To disable loop**: Delete or rename `AGENTS.md`, or set `agent_loop.enabled: false` in your YAML.
 
 ## Multi-Agent
 
@@ -111,7 +146,11 @@ The `multi_agent` section configures coordination between agents:
 multi_agent:
   memory:
     enabled: true
+    # Canonical portable handoff (repo root). Agents read/update this file.
+    canonical_file: "MEMORIA_PROYECTO.md"
+    # Stubs only — pointers to canonical_file (do not keep a second diary here)
     path: ".uagent/memory/"
+    auto_sync: true
   ownership:
     - agent: "core"
       globs: ["src/core/**"]
@@ -122,6 +161,16 @@ multi_agent:
     file_locking: true
     strategy: topological
 ```
+
+### Portable project memory
+
+| File | Role |
+|------|------|
+| **`MEMORIA_PROYECTO.md`** (repo root) | Canonical handoff — travels with the project |
+| **`AGENTS.md`** | Agent rules / loop only |
+| **`.uagent/memory/`** | Stubs pointing at `MEMORIA_PROYECTO.md` |
+
+`uagent init` creates `MEMORIA_PROYECTO.md` if missing (never overwrites) and writes stubs under `.uagent/memory/`.
 
 ## Compatibility
 

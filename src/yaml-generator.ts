@@ -59,6 +59,7 @@ interface YamlConfig {
       enabled: boolean
       path: string
       auto_sync: boolean
+      canonical_file: string
     }
     conflict: {
       file_locking: boolean
@@ -164,6 +165,10 @@ export function generateYaml(project: DetectedProject): YamlConfig {
       doom_loop_detection: true,
       rules: [
         {
+          instruction: "Read MEMORIA_PROYECTO.md at the start of substantive work",
+          description: "Canonical portable handoff at repo root; do not rely only on editor memory",
+        },
+        {
           instruction: "Always read files before editing them",
           description: "Never edit blind — understand the current state first",
         },
@@ -180,6 +185,10 @@ export function generateYaml(project: DetectedProject): YamlConfig {
           description: "Prevent doom loops",
         },
         {
+          instruction: "After a substantive delivery, update MEMORIA_PROYECTO.md",
+          description: "Date, open items, short summary — never duplicate the diary into .uagent stubs",
+        },
+        {
           instruction: "Explain what you changed and why",
           description: "Always report back with a summary",
         },
@@ -191,6 +200,7 @@ export function generateYaml(project: DetectedProject): YamlConfig {
         enabled: true,
         path: ".uagent/memory/",
         auto_sync: true,
+        canonical_file: "MEMORIA_PROYECTO.md",
       },
       conflict: {
         file_locking: true,
@@ -198,7 +208,13 @@ export function generateYaml(project: DetectedProject): YamlConfig {
         strategy: "topological",
       },
     },
-    universal_instructions: `This project is ${project.name}.\nEdit universal-agent.yaml to configure everything.\nRun \`uagent generate\` to regenerate.\nLoad AGENTS.md in your agent to activate loop mode.`,
+    universal_instructions: [
+      `This project is ${project.name}.`,
+      "Canonical portable memory: MEMORIA_PROYECTO.md (repo root). Read it first; update it after substantive deliveries.",
+      ".uagent/memory/ holds stubs that point to MEMORIA_PROYECTO.md — do not keep a second diary there.",
+      "AGENTS.md = agent rules and loop only. Edit universal-agent.yaml, then run uagent generate.",
+      "Load AGENTS.md to activate loop mode.",
+    ].join("\n"),
   }
 
   if (project.languages.length) config.project.stack.languages = project.languages
