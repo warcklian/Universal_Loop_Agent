@@ -1,0 +1,21 @@
+# Cursor rules — Universal Loop Agent
+
+Plan: `Universal_Loop_Agent_Plan.md`. Índice: `Indice.md`.
+
+## Stack
+
+- TypeScript + Bun. Prefer `bun` scripts over npm when both exist.
+- Types live only in `src/schema.ts`.
+- Section generators in `src/sections/**` return `string | null` (never empty string).
+
+## Workflow
+
+- Config source: `universal-agent.yaml` → `uagent generate` → `AGENTS.md`.
+- Canonical handoff: `MEMORIA_PROYECTO.md` at project root; `.uagent/memory/` is stubs only.
+- Paths in versioned files must be relative (portable across machines).
+- After substantive changes: `bun test`, `bun run typecheck`, update plan/índice if structure changed.
+
+## Ownership (this repo)
+
+- core: `src/schema.ts`, `src/parser.ts`, `src/generator.ts`, `src/cli.ts`, `src/detector.ts`, `src/memory.ts`, `src/yaml-generator.ts`
+- sections (integrator): `src/sections/**`

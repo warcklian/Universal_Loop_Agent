@@ -19,6 +19,17 @@ if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
+Write-Host "  Checking dependencies..." -ForegroundColor White
+if (-not (Test-Path "node_modules")) {
+    Write-Host "  Installing dependencies..." -ForegroundColor Yellow
+    bun install
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [ERROR] Failed to install dependencies." -ForegroundColor Red
+        Read-Host "  Press Enter to exit"
+        exit 1
+    }
+}
+
 Write-Host "  Detecting project stack..." -ForegroundColor White
 Write-Host ""
 
@@ -26,7 +37,7 @@ try {
     bun run src/cli.ts init ..
     Write-Host ""
     Write-Host "  [OK] Ready! Edit universal-agent.yaml if needed." -ForegroundColor Green
-    Write-Host "  Then run: uagent generate" -ForegroundColor Cyan
+    Write-Host "  Then run: generate.ps1 (or uagent generate)" -ForegroundColor Cyan
 } catch {
     Write-Host ""
     Write-Host "  [FAIL] Something went wrong: $_" -ForegroundColor Red

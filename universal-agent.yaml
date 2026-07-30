@@ -15,8 +15,6 @@ build:
 
 testing:
   unit: "bun test"
-  e2e: "bun test:e2e"
-  coverage: "bun test:coverage"
 
 code_style:
   indent: 2
@@ -48,6 +46,8 @@ agent_loop:
   timeout_seconds: 300
   doom_loop_detection: true
   rules:
+    - instruction: "Read MEMORIA_PROYECTO.md at the start of substantive work"
+      description: "Canonical portable handoff at repo root; do not rely only on editor memory"
     - instruction: "Always read files before editing them"
       description: "Never edit blind — understand the current state first"
     - instruction: "Run tests after every change"
@@ -56,6 +56,8 @@ agent_loop:
       description: "Catch errors early"
     - instruction: "If no progress in 3 iterations, stop and ask the user"
       description: "Prevent doom loops"
+    - instruction: "After a substantive delivery, update MEMORIA_PROYECTO.md"
+      description: "Date, open items, short summary — never duplicate the diary into .uagent stubs"
     - instruction: "Explain what you changed and why"
       description: "Always report back with a summary"
 
@@ -65,9 +67,17 @@ multi_agent:
     enabled: true
     path: ".uagent/memory/"
     auto_sync: true
+    canonical_file: "MEMORIA_PROYECTO.md"
   ownership:
     - agent: "core"
-      globs: ["src/schema.ts", "src/parser.ts", "src/generator.ts", "src/cli.ts"]
+      globs:
+        - "src/schema.ts"
+        - "src/parser.ts"
+        - "src/generator.ts"
+        - "src/cli.ts"
+        - "src/detector.ts"
+        - "src/memory.ts"
+        - "src/yaml-generator.ts"
     - agent: "sections"
       globs: ["src/sections/**"]
       integrator: true
@@ -100,7 +110,8 @@ rules:
 
 universal_instructions: |
   Universal agent config generator — auto-adapts to any project stack.
-  Edit universal-agent.yaml to configure everything.
-  Run `uagent generate` to regenerate.
+  Canonical portable memory: MEMORIA_PROYECTO.md (repo root). Read it first; update after substantive deliveries.
+  .uagent/memory/ holds stubs that point to MEMORIA_PROYECTO.md — do not keep a second diary there.
+  Edit universal-agent.yaml to configure everything; run `uagent generate` (or generate.bat / generate.ps1).
   Load AGENTS.md in your agent to activate loop mode.
   Work without the file for normal prompt mode.

@@ -3,11 +3,22 @@
 import { Command } from "commander"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { dirname, resolve, join } from "node:path"
+import * as readline from "node:readline"
 import { parseSource, ParseError } from "./parser.ts"
 import { generate } from "./generator.ts"
 import { detectProject } from "./detector.ts"
 import { writeYaml } from "./yaml-generator.ts"
 import { initMemory, ensureMemory } from "./memory.ts"
+
+function askConfirmation(question: string): Promise<boolean> {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise((resolve) => {
+    rl.question(`  ${question} (y/N): `, (answer) => {
+      rl.close()
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes")
+    })
+  })
+}
 
 const program = new Command()
 
@@ -22,7 +33,8 @@ program
   .argument("[target]", "Target project directory (default: parent of uagent folder)", "..")
   .option("--skip-memory", "Skip memory initialization")
   .option("--skip-yaml", "Skip YAML generation (keep existing universal-agent.yaml)")
-  .action((target: string, opts: { skipMemory?: boolean; skipYaml?: boolean }) => {
+  .option("--force", "Overwrite existing universal-agent.yaml")
+  .action((target: string, opts: { skipMemory?: boolean; skipYaml?: boolean; force?: boolean }) => {
     const targetDir = resolve(target)
     console.log(`\n  Scanning project: ${targetDir}\n`)
 
@@ -39,11 +51,12 @@ program
 
     if (!opts.skipYaml) {
       const yamlPath = join(targetDir, "universal-agent.yaml")
-      if (existsSync(yamlPath)) {
+      if (existsSync(yamlPath) && !opts.force) {
         console.log(`  universal-agent.yaml already exists — skipping (use --force to overwrite)`)
       } else {
+        const overwriting = existsSync(yamlPath)
         writeYaml(targetDir, project)
-        console.log(`  Created universal-agent.yaml`)
+        console.log(overwriting ? `  Overwrote universal-agent.yaml` : `  Created universal-agent.yaml`)
       }
     }
 
@@ -52,9 +65,9 @@ program
     }
 
     console.log(`\n  Done! Next steps:`)
-    console.log(`  1. Edit universal-agent.yaml if needed`)
-    console.log(`  2. Run: uagent generate`)
-    console.log(`  3. Load AGENTS.md in your AI editor\n`)
+    console.log(`  1. Edit MEMORIA_PROYECTO.md (canonical handoff) and universal-agent.yaml if needed`)
+    console.log(`  2. Run: uagent generate (or generate.bat / generate.ps1 from this folder)`)
+    console.log(`  3. Load AGENTS.md in your AI editor (loop rules; memory stays in MEMORIA_PROYECTO.md)\n`)
   })
 
 program
@@ -75,7 +88,8 @@ program
   .option("-o, --output <dir>", "Output directory", ".")
   .option("--dry-run", "Print without writing")
   .option("--init-memory", "Create .uagent/memory/ if missing")
-  .action((source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean }) => {
+  .option("--force", "Overwrite existing AGENTS.md without asking")
+  .action(async (source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean; force?: boolean }) => {
     try {
       const config = parseSource(source)
       const result = generate(config)
@@ -85,6 +99,14 @@ program
         console.log(`\n--- ${outPath} ---\n`)
         console.log(result.content)
         return
+      }
+
+      if (existsSync(outPath) && !opts.force) {
+        const overwrite = await askConfirmation(`${result.file} already exists. Overwrite?`)
+        if (!overwrite) {
+          console.log(`  Skipped ${result.file}`)
+          return
+        }
       }
 
       const dir = dirname(outPath)

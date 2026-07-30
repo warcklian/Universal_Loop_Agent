@@ -148,6 +148,7 @@ function validateMultiAgent(raw: Record<string, unknown> | undefined): MultiAgen
         enabled: bool(memRaw["enabled"]),
         path: str(memRaw["path"]),
         auto_sync: bool(memRaw["auto_sync"]),
+        canonical_file: str(memRaw["canonical_file"]),
       }
     : undefined
 

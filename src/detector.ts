@@ -187,20 +187,53 @@ function detectDatabases(root: string): string[] {
   return [...new Set(dbs)]
 }
 
+function preferredPackageManager(managers: string[]): string {
+  const order = ["bun", "pnpm", "yarn", "npm"]
+  for (const m of order) {
+    if (managers.includes(m)) return m
+  }
+  return "npm"
+}
+
+function runScript(manager: string, script: string): string {
+  if (manager === "bun") return `bun run ${script}`
+  if (manager === "pnpm") return `pnpm run ${script}`
+  if (manager === "yarn") return `yarn ${script}`
+  if (script === "test") return "npm test"
+  return `npm run ${script}`
+}
+
+function installCommand(manager: string): string {
+  if (manager === "bun") return "bun install"
+  if (manager === "pnpm") return "pnpm install"
+  if (manager === "yarn") return "yarn"
+  return "npm install"
+}
+
 function detectBuildCommands(
   pkg: Record<string, unknown> | null,
   root: string,
+  managers: string[],
 ): DetectedProject["buildCommands"] {
   const cmds: DetectedProject["buildCommands"] = {}
+  const manager = preferredPackageManager(managers)
+
+  if (pkg) {
+    cmds.install = installCommand(manager)
+  }
 
   if (pkg?.scripts) {
     const scripts = pkg.scripts as Record<string, string>
-    if (scripts.dev) cmds.dev = `npm run dev`
-    if (scripts.build) cmds.build = `npm run build`
-    if (scripts.lint) cmds.lint = `npm run lint`
-    if (scripts.test) cmds.test = `npm test`
-    if (scripts.typecheck || scripts["type-check"]) cmds.typecheck = `npm run ${scripts.typecheck ? "typecheck" : "type-check"}`
-    if (scripts.format || scripts.prettier) cmds.format = `npm run ${scripts.format ? "format" : "prettier"}`
+    if (scripts.dev) cmds.dev = runScript(manager, "dev")
+    if (scripts.build) cmds.build = runScript(manager, "build")
+    if (scripts.lint) cmds.lint = runScript(manager, "lint")
+    if (scripts.test) cmds.test = runScript(manager, "test")
+    if (scripts.typecheck || scripts["type-check"]) {
+      cmds.typecheck = runScript(manager, scripts.typecheck ? "typecheck" : "type-check")
+    }
+    if (scripts.format || scripts.prettier) {
+      cmds.format = runScript(manager, scripts.format ? "format" : "prettier")
+    }
   }
 
   if (existsSync(join(root, "Makefile"))) {
@@ -238,6 +271,7 @@ export function detectProject(targetDir: string): DetectedProject {
   const root = resolve(targetDir)
   const pkg = readFileJSON(join(root, "package.json"))
   const projectName = (pkg?.name as string) || basename(root)
+  const packageManagers = detectPackageManagers(root)
 
   return {
     name: projectName,
@@ -245,9 +279,9 @@ export function detectProject(targetDir: string): DetectedProject {
     languages: detectLanguages(root),
     frameworks: detectFrameworks(pkg),
     runtime: detectRuntime(pkg, root),
-    packageManagers: detectPackageManagers(root),
+    packageManagers,
     databases: detectDatabases(root),
-    buildCommands: detectBuildCommands(pkg, root),
+    buildCommands: detectBuildCommands(pkg, root, packageManagers),
     hasGit: existsSync(join(root, ".git")),
   }
 }

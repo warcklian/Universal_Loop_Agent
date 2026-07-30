@@ -6,49 +6,71 @@ Universal agent config generator. Edit one YAML, generate `AGENTS.md` compatible
 
 `uagent` takes a single `universal-agent.yaml` and generates an `AGENTS.md` file that works with OpenCode, Cursor, Copilot, Claude Code, Windsurf, Devin, Gemini CLI, and 20+ more editors.
 
+Portable handoff lives in **`MEMORIA_PROYECTO.md`** at the consumer project root. `.uagent/memory/` only holds stubs that point there.
+
 ## Quick start
 
+Typical layout: place this tool as a subfolder of the target project (or pass an explicit path to `init` / `generate`).
+
+### Option 1: Windows wrappers (from this folder)
+
 ```bash
-# Install
-npm install -g uagent
+# Initialize parent project (auto-detect stack → YAML + MEMORIA_PROYECTO.md)
+init.bat
+# or: init.ps1
 
-# Or with bun
-bun install -g uagent
-
-# Initialize
-uagent init
-
-# Edit universal-agent.yaml
-# Generate AGENTS.md
-uagent generate
+# Generate AGENTS.md in the parent directory
+generate.bat
+# or: generate.ps1
 ```
+
+### Option 2: CLI (Bun)
+
+```bash
+bun install
+
+# Initialize a target directory (default: parent "..")
+bun run src/cli.ts init ..
+bun run src/cli.ts init . --force   # overwrite YAML in current dir
+
+# Detect stack only (JSON)
+bun run src/cli.ts detect ..
+
+# Generate / validate
+bun run src/cli.ts generate ../universal-agent.yaml -o .. --force
+bun run src/cli.ts validate ../universal-agent.yaml
+bun run src/cli.ts generate --dry-run
+```
+
+This package is marked `"private": true` — use Bun from source or the wrappers, not a public npm publish.
 
 ## How it works
 
 ```
-universal-agent.yaml → [uagent generate] → AGENTS.md
+[detect] → universal-agent.yaml → [uagent generate] → AGENTS.md
+                ↓
+         MEMORIA_PROYECTO.md  (+ .uagent/memory stubs)
 ```
 
-1. You edit `universal-agent.yaml` with your project info
-2. Run `uagent generate`
+1. Run `init` (or edit `universal-agent.yaml` by hand)
+2. Run `generate`
 3. Load `AGENTS.md` in your AI editor
-4. The editor picks it up automatically
+4. Keep session handoff in `MEMORIA_PROYECTO.md`
 
 ## Configuration
 
-Edit `universal-agent.yaml`:
+Edit `universal-agent.yaml` in the **target** project:
 
 ```yaml
 project:
   name: "My Project"
   stack:
     languages: [typescript]
-    runtime: [node 22]
+    runtime: [bun]
 
 build:
-  install: "npm install"
-  dev: "npm run dev"
-  test: "npm test"
+  install: "bun install"
+  dev: "bun run dev"
 
 agent_loop:
   max_iterations: 15
@@ -59,6 +81,7 @@ agent_loop:
 multi_agent:
   memory:
     enabled: true
+    canonical_file: "MEMORIA_PROYECTO.md"
     path: ".uagent/memory/"
   ownership:
     - agent: "frontend"
@@ -70,23 +93,19 @@ multi_agent:
 
 ## Sections
 
-The generated `AGENTS.md` includes:
-
 | Section | What it configures |
 |---------|-------------------|
 | Project Overview | Name, description, stack |
 | Build & Run | Install, dev, build, lint commands |
-| Testing | Unit, e2e, coverage commands |
+| Testing | Unit / e2e / coverage when configured |
 | Code Style | Indent, quotes, conventions |
 | Security | Security rules |
 | Git | Commit format, branch naming |
 | Agent Loop | Max iterations, timeout, loop rules |
-| Multi-Agent | Memory, ownership matrix, conflict prevention |
+| Multi-Agent | Canonical memory, ownership, conflict prevention |
 | Project Rules | File-scoped instructions |
 
 ## Agent Loop
-
-The `agent_loop` section defines how your agent behaves in loop mode:
 
 ```yaml
 agent_loop:
@@ -94,90 +113,60 @@ agent_loop:
   max_iterations: 15
   timeout_seconds: 300
   doom_loop_detection: true
-  rules:
-    - instruction: "Always read files before editing"
-    - instruction: "Run tests after every change"
-    - instruction: "If no progress in 3 iterations, stop and ask"
 ```
 
-**Prompt mode**: Work without loading `AGENTS.md` — no loop behavior.
-**Loop mode**: Load `AGENTS.md` in your agent — loop activates.
+| Mode | Behavior |
+|------|----------|
+| Prompt | Work without loading `AGENTS.md` |
+| Loop | Load `AGENTS.md` — loop rules apply |
 
-## Multi-Agent
+| Editor | How to activate |
+|--------|-----------------|
+| OpenCode / Cursor / Windsurf / Cline / Roo Code | Auto-detect `AGENTS.md` |
+| Claude Code | In `CLAUDE.md`: `@AGENTS.md` |
+| GitHub Copilot | Reference via `.github/copilot-instructions.md` |
 
-The `multi_agent` section configures coordination between agents:
+Disable: rename/delete `AGENTS.md`, or set `agent_loop.enabled: false`.
 
-```yaml
-multi_agent:
-  memory:
-    enabled: true
-    path: ".uagent/memory/"
-  ownership:
-    - agent: "core"
-      globs: ["src/core/**"]
-    - agent: "api"
-      globs: ["src/api/**"]
-      integrator: true
-  conflict:
-    file_locking: true
-    strategy: topological
-```
+## Multi-Agent / portable memory
 
-## Compatibility
+| File | Role |
+|------|------|
+| **`MEMORIA_PROYECTO.md`** (repo root) | Canonical handoff — travels with the project |
+| **`AGENTS.md`** | Agent rules / loop only (generated) |
+| **`.uagent/memory/`** | Stubs pointing at `MEMORIA_PROYECTO.md` (not a second diary) |
 
-`AGENTS.md` is auto-detected by:
-
-| Editor | Auto-detected |
-|--------|:------------:|
-| OpenCode | ✅ |
-| Codex | ✅ |
-| GitHub Copilot | ✅ |
-| Cursor | ✅ |
-| Windsurf | ✅ |
-| Devin | ✅ |
-| Jules | ✅ |
-| Zed | ✅ |
-| Amp | ✅ |
-| Roo Code | ✅ |
-| Kilo Code | ✅ |
-| Cline | ✅ |
-| Claude Code | via `CLAUDE.md` → `@AGENTS.md` |
-| Gemini CLI | via config |
+`uagent init` creates `MEMORIA_PROYECTO.md` if missing (never overwrites) and writes stubs under `.uagent/memory/`.
 
 ## CLI commands
 
 ```bash
-# Generate AGENTS.md
-uagent generate
-
-# Validate universal-agent.yaml
-uagent validate
-
-# Preview without writing
-uagent generate --dry-run
+uagent init [target] [--force] [--skip-yaml] [--skip-memory]
+uagent detect [target]
+uagent generate [source] [-o dir] [--dry-run] [--force] [--init-memory]
+uagent validate [source]
 ```
 
-## Project structure
+## Project structure (consumer)
 
 ```
 your-project/
-├── universal-agent.yaml    # Edit this
-├── AGENTS.md               # Generated (auto-detected by editors)
-└── .uagent/
-    └── memory/             # Local memory (not in git, moves with folder)
+├── universal-agent.yaml
+├── MEMORIA_PROYECTO.md
+├── AGENTS.md
+├── .uagent/memory/          # stubs only
+└── Universal_Loop_Agent/    # this tool (optional nested layout)
+    ├── init.bat / init.ps1
+    └── generate.bat / generate.ps1
 ```
 
 ## Migration
 
-The project is fully portable. To move to another machine or path:
+1. Copy the project folder (any path/machine)
+2. `bun install` inside `Universal_Loop_Agent/`
+3. Regenerate: `bun run src/cli.ts generate` (paths relative to the YAML)
 
-1. Copy the entire project folder (USB, network, cloud, etc.)
-2. Reinstall dependencies: `bun install`
-3. Regenerate: `bun run src/cli.ts generate`
-
-All paths in `universal-agent.yaml` are relative — no absolute paths to fix.
-
-**Memory**: `.uagent/memory/` is not in git but moves with the folder. Each project has its own memory.
+No absolute machine paths in versioned config.
 
 ## License
 

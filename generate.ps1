@@ -29,7 +29,7 @@ Write-Host "  Generating AGENTS.md..." -ForegroundColor White
 Write-Host ""
 
 try {
-    bun run src/cli.ts generate ../universal-agent.yaml
+    bun run src/cli.ts generate ../universal-agent.yaml -o .. --force
     Write-Host ""
     Write-Host "  [OK] AGENTS.md generated successfully." -ForegroundColor Green
     Write-Host "  Load it in your AI editor to activate loop mode." -ForegroundColor Cyan
