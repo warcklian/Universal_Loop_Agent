@@ -36,5 +36,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # generated file (by uagent generate)
 AGENTS.md
 
-# multi-agent memory (local per project, not shared via git)
+# multi-agent memory / local uagent artifacts (not shared via git)
 .uagent/memory/
+.uagent/upgrade-report.json
