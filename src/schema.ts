@@ -69,7 +69,11 @@ export interface MemoryConfig {
   auto_sync?: boolean
   /**
    * Canonical portable handoff Markdown at project root.
+<<<<<<< HEAD
    * Default: PROJECT_MEMORY.md — agents must read/update this file, not only .uagent stubs.
+=======
+   * Default: MEMORIA_PROYECTO.md — agents must read/update this file, not only .uagent stubs.
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
    */
   canonical_file?: string
 }

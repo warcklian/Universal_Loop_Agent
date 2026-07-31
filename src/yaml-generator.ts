@@ -60,7 +60,14 @@ interface YamlConfig {
       enabled: boolean
       path: string
       auto_sync: boolean
+<<<<<<< HEAD
       canonical_file: string
+=======
+<<<<<<< HEAD
+      canonical_file: string
+=======
+>>>>>>> ea657247f25059f94102155518e1f7eb9392381c
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
     }
     conflict: {
       file_locking: boolean
@@ -171,7 +178,46 @@ export function generateYaml(project: DetectedProject): YamlConfig {
       max_iterations: 30,
       timeout_seconds: 600,
       doom_loop_detection: true,
+<<<<<<< HEAD
       rules: defaultConsumerLoopRules(),
+=======
+      rules: [
+        {
+<<<<<<< HEAD
+          instruction: "Read MEMORIA_PROYECTO.md at the start of substantive work",
+          description: "Canonical portable handoff at repo root; do not rely only on editor memory",
+        },
+        {
+=======
+>>>>>>> ea657247f25059f94102155518e1f7eb9392381c
+          instruction: "Always read files before editing them",
+          description: "Never edit blind — understand the current state first",
+        },
+        {
+          instruction: "Run tests after every change",
+          description: "Verify correctness immediately",
+        },
+        {
+          instruction: "Run linter and type checker after edits",
+          description: "Catch errors early",
+        },
+        {
+          instruction: "If no progress in 3 iterations, stop and ask the user",
+          description: "Prevent doom loops",
+        },
+        {
+<<<<<<< HEAD
+          instruction: "After a substantive delivery, update MEMORIA_PROYECTO.md",
+          description: "Date, open items, short summary — never duplicate the diary into .uagent stubs",
+        },
+        {
+=======
+>>>>>>> ea657247f25059f94102155518e1f7eb9392381c
+          instruction: "Explain what you changed and why",
+          description: "Always report back with a summary",
+        },
+      ],
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
     },
     multi_agent: {
       enabled: true,
@@ -179,7 +225,14 @@ export function generateYaml(project: DetectedProject): YamlConfig {
         enabled: true,
         path: ".uagent/memory/",
         auto_sync: true,
+<<<<<<< HEAD
         canonical_file: "PROJECT_MEMORY.md",
+=======
+<<<<<<< HEAD
+        canonical_file: "MEMORIA_PROYECTO.md",
+=======
+>>>>>>> ea657247f25059f94102155518e1f7eb9392381c
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
       },
       conflict: {
         file_locking: true,
@@ -187,6 +240,7 @@ export function generateYaml(project: DetectedProject): YamlConfig {
         strategy: "topological",
       },
     },
+<<<<<<< HEAD
     universal_instructions: [
       `This project is ${project.name}.`,
       "Load AGENTS.md to activate autonomous loop mode. PROJECT_MEMORY.md is the portable handoff — read it first; update it as phases complete.",
@@ -198,6 +252,19 @@ export function generateYaml(project: DetectedProject): YamlConfig {
     ]
       .filter(Boolean)
       .join("\n"),
+=======
+<<<<<<< HEAD
+    universal_instructions: [
+      `This project is ${project.name}.`,
+      "Canonical portable memory: MEMORIA_PROYECTO.md (repo root). Read it first; update it after substantive deliveries.",
+      ".uagent/memory/ holds stubs that point to MEMORIA_PROYECTO.md — do not keep a second diary there.",
+      "AGENTS.md = agent rules and loop only. Edit universal-agent.yaml, then run uagent generate.",
+      "Load AGENTS.md to activate loop mode.",
+    ].join("\n"),
+=======
+    universal_instructions: `This project is ${project.name}.\nEdit universal-agent.yaml to configure everything.\nRun \`uagent generate\` to regenerate.\nLoad AGENTS.md in your agent to activate loop mode.`,
+>>>>>>> ea657247f25059f94102155518e1f7eb9392381c
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
   }
 
   if (project.languages.length) config.project.stack.languages = project.languages

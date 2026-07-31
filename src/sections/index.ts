@@ -117,7 +117,15 @@ export function sectionAgentLoop(s: SourceConfig): string | null {
   }
 
   lines.push("")
+<<<<<<< HEAD
   lines.push(...loopActivationLines())
+=======
+  lines.push("### How to use")
+  lines.push("")
+  lines.push("- **Loop mode:** Load this file in your agent (Claude Code, Cursor, OpenCode, etc.)")
+  lines.push("- **Prompt mode:** Work without loading this file — no loop behavior activates")
+  lines.push("- **AGENTS.md** = agent rules/loop only; project handoff memory is `MEMORIA_PROYECTO.md` (or `multi_agent.memory.canonical_file`)")
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
 
   return lines.join("\n")
 }
@@ -129,7 +137,11 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
   lines.push("")
 
   if (ma.memory) {
+<<<<<<< HEAD
     const canonical = ma.memory.canonical_file || "PROJECT_MEMORY.md"
+=======
+    const canonical = ma.memory.canonical_file || "MEMORIA_PROYECTO.md"
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
     lines.push("### Shared Memory")
     lines.push("")
     lines.push(bullet(`**Enabled:** ${ma.memory.enabled !== false ? "yes" : "no"}`))
@@ -137,9 +149,13 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
     if (ma.memory.path) {
       lines.push(bullet(`**uagent stubs path:** \`${ma.memory.path}\` (pointers only; do not duplicate the diary there)`))
     }
+<<<<<<< HEAD
     if (ma.memory.auto_sync) {
       lines.push(bullet(`**Auto-sync:** enabled — keep \`${canonical}\` (canonical) up to date after substantive work`))
     }
+=======
+    if (ma.memory.auto_sync) lines.push(bullet("**Auto-sync:** enabled — keep `MEMORIA_PROYECTO.md` (canonical) up to date after substantive work"))
+>>>>>>> 22bb3ef495b2b824adfa337c84e9d44877d80406
     lines.push("")
     lines.push("At the start of substantive work, read the canonical memory file. After finishing a delivery, update it (date, open items, short summary). Editor-local memory does not travel with the repo.")
   }
