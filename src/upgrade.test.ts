@@ -67,6 +67,7 @@ describe("upgrade", () => {
       runUpgrade(root, { dryRun: true, yes: true, batchSize: 50 })
       expect(existsSync(join(root, "MEMORIA_PROYECTO.md"))).toBe(true)
       expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(false)
+      expect(existsSync(join(root, ".uagent", "upgrade-report.json"))).toBe(false)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -106,6 +107,10 @@ describe("upgrade", () => {
       expect(report.verify.ok).toBe(true)
       expect(report.applied.memorySynced).toBe(true)
       expect(report.applied.agentsRegenerated).toBe(true)
+      const saved = JSON.parse(readFileSync(join(root, ".uagent", "upgrade-report.json"), "utf-8")) as {
+        root: string
+      }
+      expect(saved.root).toBe(".")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

@@ -73,8 +73,9 @@ Write-Host ""
 bun run src/cli.ts ensure-idea ..
 Write-Host ""
 
-$ideaCandidates = @("..\idea.md", "..\IDEA.md", "..\plan.md", "..\PLAN.md", "..\idea.txt")
-$idea = $ideaCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+# Paths relative to parent target (..) — not ..\ which would resolve to grandparent
+$ideaCandidates = @("idea.md", "IDEA.md", "plan.md", "PLAN.md", "idea.txt")
+$idea = $ideaCandidates | Where-Object { Test-Path (Join-Path ".." $_) } | Select-Object -First 1
 
 if ($idea) {
     Write-Host "  [4/6] plan-from — phases from $idea..." -ForegroundColor White

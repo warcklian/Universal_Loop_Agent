@@ -616,7 +616,9 @@ function verifyUpgrade(root: string, plan: UpgradePlan): UpgradeReport["verify"]
 function writeReport(root: string, report: UpgradeReport): void {
   const dir = join(root, ".uagent")
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, "upgrade-report.json"), JSON.stringify(report, null, 2), "utf-8")
+  // Portable: report lives inside the project — never embed absolute machine paths.
+  const portable = { ...report, root: "." }
+  writeFileSync(join(dir, "upgrade-report.json"), JSON.stringify(portable, null, 2), "utf-8")
 }
 
 export interface UpgradeResult {
@@ -712,10 +714,6 @@ export function runUpgrade(targetDir: string, opts: UpgradeOptions = {}): Upgrad
   }
 
   if (!dryRun) writeReport(root, report)
-  else {
-    // Still write dry-run report for inspection
-    writeReport(root, report)
-  }
 
   return { report, plan }
 }

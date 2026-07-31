@@ -69,12 +69,13 @@ echo.
 call bun run src/cli.ts ensure-idea ..
 echo.
 
+rem Paths relative to parent target (..) — not ../ which would resolve to grandparent
 set "IDEA="
-if exist "..\idea.md" set "IDEA=../idea.md"
-if exist "..\IDEA.md" set "IDEA=../IDEA.md"
-if exist "..\plan.md" set "IDEA=../plan.md"
-if exist "..\PLAN.md" set "IDEA=../PLAN.md"
-if exist "..\idea.txt" set "IDEA=../idea.txt"
+if exist "..\idea.md" set "IDEA=idea.md"
+if exist "..\IDEA.md" set "IDEA=IDEA.md"
+if exist "..\plan.md" set "IDEA=plan.md"
+if exist "..\PLAN.md" set "IDEA=PLAN.md"
+if exist "..\idea.txt" set "IDEA=idea.txt"
 
 if defined IDEA (
     echo  [4/6] plan-from — phases from %IDEA%...

@@ -28,6 +28,7 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - [x] Light deep detect (README + src layout + scripts, no new deps)
 - [x] setup-all.bat as sole Windows entry for all users (init+upgrade+plan-from+generate+doctor)
 - [x] UX polish: README 3 steps, idea template, start prompt, DoD/resume, doctor tips
+- [x] Post-review defect fixes (legacy memory migrate, plan-from paths, phases regex, adopt, dry-run)
 - [ ] Public npm packaging (optional)
 
 ## Open items
@@ -38,5 +39,7 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 
 ## Recent status
 
-Polish complete: day-1 flow is nest toolkit → `setup-all.bat` → load AGENTS.md + paste
-`LOOP_START_PROMPT.txt`. Product files stay in the parent project; toolkit is not app code.
+Post-review fixes: `ensureCanonicalMemory` migrates `MEMORIA_PROYECTO.md` before seeding;
+`setup-all` passes idea paths relative to parent; `plan-from` phases replace without `\z` bug;
+`adopt` avoids duplicate YAML keys; `upgrade --dry-run` does not write reports (portable `root: "."` when applied).
+22 tests pass.

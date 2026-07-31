@@ -43,7 +43,8 @@ function extractPhases(text: string): string[] {
   return [`Phase 1 — Implement the idea from the provided file`]
 }
 
-function upsertPhasesSection(memory: string, phases: string[], ideaName: string): string {
+/** Replace or insert the ## Phases section (JS has no \\z end-anchor). */
+export function upsertPhasesSection(memory: string, phases: string[], ideaName: string): string {
   const checklist = phases.map((p) => `- [ ] ${p}`).join("\n")
   const block = [
     "## Phases",
@@ -54,8 +55,12 @@ function upsertPhasesSection(memory: string, phases: string[], ideaName: string)
     "",
   ].join("\n")
 
-  if (/^## Phases\b/m.test(memory)) {
-    return memory.replace(/^## Phases\b[\s\S]*?(?=^## |\z)/m, `${block}\n`)
+  const startIdx = memory.search(/^## Phases\b/m)
+  if (startIdx >= 0) {
+    const afterHeading = memory.slice(startIdx + "## Phases".length)
+    const nextRel = afterHeading.search(/\n## /)
+    const endIdx = nextRel < 0 ? memory.length : startIdx + "## Phases".length + nextRel
+    return `${memory.slice(0, startIdx)}${block}${nextRel < 0 ? "" : memory.slice(endIdx + 1)}`
   }
 
   if (/^---$/m.test(memory)) {

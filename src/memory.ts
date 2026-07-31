@@ -1,9 +1,12 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs"
+import { writeFileSync, mkdirSync, existsSync, readFileSync, renameSync } from "node:fs"
 import { join } from "node:path"
 import type { DetectedProject } from "./detector.ts"
 
 /** Canonical portable handoff at project root (survives folder/machine moves). */
 export const CANONICAL_MEMORY_FILE = "PROJECT_MEMORY.md"
+
+/** Legacy Spanish filename — migrate to canonical before seeding empty memory. */
+export const LEGACY_MEMORY_FILES = ["MEMORIA_PROYECTO.md"] as const
 
 export interface MemoryFile {
   path: string
@@ -148,13 +151,26 @@ export function getMemoryFiles(project: DetectedProject): MemoryFile[] {
   ]
 }
 
-/** Create root PROJECT_MEMORY.md only if missing (never overwrite). */
+/**
+ * Create root PROJECT_MEMORY.md only if missing (never overwrite).
+ * If a legacy memory file exists, rename it instead of seeding empty content
+ * (avoids init → upgrade --prune deleting real handoff).
+ */
 export function ensureCanonicalMemory(targetDir: string, project: DetectedProject): void {
   const memoryPath = join(targetDir, CANONICAL_MEMORY_FILE)
   if (existsSync(memoryPath)) {
     console.log(`  ${CANONICAL_MEMORY_FILE} already exists — left unchanged`)
     return
   }
+
+  for (const legacy of LEGACY_MEMORY_FILES) {
+    const legacyPath = join(targetDir, legacy)
+    if (!existsSync(legacyPath)) continue
+    renameSync(legacyPath, memoryPath)
+    console.log(`  Migrated ${legacy} → ${CANONICAL_MEMORY_FILE}`)
+    return
+  }
+
   writeFileSync(memoryPath, createProjectMemorySeed(project), "utf-8")
   console.log(`  Created ${CANONICAL_MEMORY_FILE} (canonical portable memory)`)
 }

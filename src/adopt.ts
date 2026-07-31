@@ -39,6 +39,32 @@ function pickBestSource(root: string, preferred?: string): string | null {
   return best?.path ?? null
 }
 
+/** Indent block lines for a YAML literal/folded scalar body. */
+function indentBlock(block: string): string {
+  return block.split("\n").map((l) => (l.length ? `  ${l}` : "")).join("\n")
+}
+
+/**
+ * Append adopt text into universal_instructions without duplicating the key.
+ * Prefer in-place inject for `|` / `>` scalars; otherwise YAML round-trip.
+ */
+export function appendAdoptInstructions(raw: string, block: string): string {
+  const indented = indentBlock(block)
+  const blockScalar = /^universal_instructions:\s*([|>][-+]?)[^\n]*\n/m
+  if (blockScalar.test(raw)) {
+    return raw.replace(blockScalar, (m) => `${m}${indented}\n`)
+  }
+
+  if (/^universal_instructions\s*:/m.test(raw)) {
+    const doc = YAML.parse(raw) as Record<string, unknown>
+    const prev = typeof doc.universal_instructions === "string" ? doc.universal_instructions : ""
+    doc.universal_instructions = `${prev}\n${block}`.trim()
+    return YAML.stringify(doc, { indent: 2, lineWidth: 120 })
+  }
+
+  return `${raw.trimEnd()}\n\nuniversal_instructions: |\n${indented}\n`
+}
+
 /**
  * Import existing editor instruction files into universal-agent.yaml
  * without destroying portable memory. Relative paths only.
@@ -107,15 +133,7 @@ export function adoptProject(
     }
   }
 
-  if (/^universal_instructions:\s*\|/m.test(raw)) {
-    raw = raw.replace(
-      /^(universal_instructions:\s*\|[^\n]*\n)/m,
-      `$1${block.split("\n").map((l) => (l.length ? `  ${l}` : "")).join("\n")}\n`,
-    )
-  } else {
-    raw += `\nuniversal_instructions: |\n${block.split("\n").map((l) => `  ${l}`).join("\n")}\n`
-  }
-
+  raw = appendAdoptInstructions(raw, block)
   writeFileSync(yamlPath, raw, "utf-8")
   return {
     sourceFile: sourcePath,

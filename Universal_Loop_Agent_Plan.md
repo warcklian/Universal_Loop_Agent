@@ -1,5 +1,24 @@
 # Universal_Loop_Agent — Master plan
 
+## Registro — 2026-07-30 (Post-review fixes)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Corregir defectos de setup-all / plan-from / adopt / dry-run |
+| **Goal** | No perder memoria legacy, plan-from usable, phases sin corrupción, adopt/dry-run correctos |
+| **Scope** | `memory.ts`, `plan-from.ts`, `adopt.ts`, `upgrade.ts`, `setup-all.*`, tests |
+| **Status** | Completed |
+
+### Entregado
+
+- `ensureCanonicalMemory` migra `MEMORIA_PROYECTO.md` → `PROJECT_MEMORY.md` antes de seed vacío
+- `setup-all` pasa `idea.md` relativo al target (no `../idea.md` → abuelo)
+- `upsertPhasesSection` sin ancla `\z` inválida en JS
+- `appendAdoptInstructions` evita clave duplicada (`|` / `>` / ausente)
+- `upgrade --dry-run` no escribe informe; informe aplica usa `root: "."`
+
+---
+
 ## Registro — 2026-07-30 (Licencia MIT completa)
 
 | Field | Value |

@@ -3,12 +3,15 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { syncAdapters, buildAdapters } from "./adapters.ts"
-import { adoptProject } from "./adopt.ts"
-import { planFromIdea } from "./plan-from.ts"
+import { adoptProject, appendAdoptInstructions } from "./adopt.ts"
+import { planFromIdea, upsertPhasesSection } from "./plan-from.ts"
 import { runDoctor } from "./doctor.ts"
 import { generate } from "./generator.ts"
 import { parseSource } from "./parser.ts"
 import { ensureIdeaFile, loopStartPrompt, writeStartPromptFile } from "./idea-template.ts"
+import { ensureCanonicalMemory, CANONICAL_MEMORY_FILE } from "./memory.ts"
+import { detectProject } from "./detector.ts"
+import { runUpgrade } from "./upgrade.ts"
 
 function tmpRoot(tag: string): string {
   const root = join(tmpdir(), `uagent-feat-${tag}-${Date.now()}`)
@@ -74,6 +77,21 @@ describe("adopt", () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  test("appends into YAML without universal_instructions key (no duplicate)", () => {
+    const raw = ['project:', '  name: "X"', "agent_loop:", "  enabled: true", ""].join("\n")
+    const next = appendAdoptInstructions(raw, "\n# --- adopted ---\nKeep secrets out\n")
+    const matches = next.match(/^universal_instructions\s*:/gm) ?? []
+    expect(matches.length).toBe(1)
+    expect(next).toContain("Keep secrets out")
+  })
+
+  test("injects into folded > scalar without duplicating key", () => {
+    const raw = ["universal_instructions: >", "  Base rule", ""].join("\n")
+    const next = appendAdoptInstructions(raw, "\nAdopted line\n")
+    expect((next.match(/^universal_instructions\s*:/gm) ?? []).length).toBe(1)
+    expect(next).toContain("Adopted line")
+  })
 })
 
 describe("plan-from", () => {
@@ -92,6 +110,85 @@ describe("plan-from", () => {
       expect(mem).toContain("## Phases")
       expect(mem).toContain("Auth")
       expect(mem).toContain("- [ ]")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("upsertPhasesSection keeps text containing z and following sections", () => {
+    const memory = [
+      "# Mem",
+      "",
+      "## Phases",
+      "",
+      "- [ ] Old",
+      "",
+      "## Open items",
+      "",
+      "Authorize deploy",
+      "",
+    ].join("\n")
+    const next = upsertPhasesSection(memory, ["Authorize users", "API zone"], "idea.md")
+    expect(next).toContain("- [ ] Authorize users")
+    expect(next).toContain("- [ ] API zone")
+    expect(next).toContain("## Open items")
+    expect(next).toContain("Authorize deploy")
+    expect(next).not.toMatch(/ze\.\.\.|zeOpen/)
+  })
+
+  test("resolves idea path relative to target (setup-all argv shape)", () => {
+    const root = tmpRoot("plan-rel")
+    try {
+      writeFileSync(
+        join(root, "idea.md"),
+        ["# App", "", "## Authorize", "Users", "", "## API zone", "REST"].join("\n"),
+        "utf-8",
+      )
+      writeFileSync(join(root, "package.json"), JSON.stringify({ name: "plan-rel" }), "utf-8")
+      // Same argv shape as setup-all: plan-from idea.md <parent>
+      const result = planFromIdea(root, "idea.md")
+      expect(result.phases.some((p) => /Authorize/i.test(p))).toBe(true)
+      const mem = readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")
+      expect(mem).toContain("Authorize")
+      expect(mem).toContain("API zone")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("memory migrate", () => {
+  test("ensureCanonicalMemory renames MEMORIA_PROYECTO before seed; prune keeps content", () => {
+    const root = tmpRoot("mem-migrate")
+    try {
+      writeFileSync(join(root, "package.json"), JSON.stringify({ name: "mig" }), "utf-8")
+      writeFileSync(join(root, "MEMORIA_PROYECTO.md"), "# Real handoff\n\nKeep this content\n", "utf-8")
+      const project = detectProject(root)
+      ensureCanonicalMemory(root, project)
+      expect(existsSync(join(root, "MEMORIA_PROYECTO.md"))).toBe(false)
+      expect(existsSync(join(root, CANONICAL_MEMORY_FILE))).toBe(true)
+      expect(readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")).toContain("Keep this content")
+
+      writeFileSync(
+        join(root, "universal-agent.yaml"),
+        [
+          "project:",
+          '  name: "mig"',
+          "  stack:",
+          "    languages: [typescript]",
+          "multi_agent:",
+          "  memory:",
+          "    enabled: true",
+          '    canonical_file: "PROJECT_MEMORY.md"',
+          "agent_loop:",
+          "  enabled: true",
+          "",
+        ].join("\n"),
+        "utf-8",
+      )
+      // Simulate leftover legacy after migrate (should not happen) — content already in canonical
+      runUpgrade(root, { dryRun: false, yes: true, prune: true, batchSize: 50 })
+      expect(readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")).toContain("Keep this content")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
