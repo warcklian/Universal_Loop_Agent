@@ -1,5 +1,24 @@
 # Universal_Loop_Agent — Master plan
 
+## Registro — 2026-07-30 (setup-all on nested ComfyUI)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Hardening after first consumer run (ComfyUI_windows_portable) |
+| **Goal** | No tocar toolkit anidado; no renombrar Indice del producto; no inventar fases desde plantilla; encoding consola |
+| **Scope** | `upgrade.ts`, `plan-from.ts`, `cli.ts`, `setup-all.*`, tests |
+| **Status** | Completed |
+
+### Entregado
+
+- `upgrade` omite carpeta `Universal_Loop_Agent` / toolkit anidado
+- Ya no migra `Indice.md` → `Index.md` (rompe índices de producto)
+- `plan-from` detecta plantilla vacía y no escribe fases falsas
+- `setup-all.bat`: `chcp 65001` + guiones ASCII; idea path first-match
+- dry-run no anuncia informe escrito
+
+---
+
 ## Registro — 2026-07-30 (Post-review fixes)
 
 | Field | Value |

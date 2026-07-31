@@ -1,4 +1,8 @@
 @echo off
+REM UTF-8 console so dashes/arrows do not show as mojibake (OCo, etc.)
+chcp 65001 >nul
+setlocal EnableExtensions
+
 echo.
 echo  ====================================
 echo   Universal Loop Agent - setup-all
@@ -11,7 +15,7 @@ cd /d "%~dp0"
 
 where bun >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  [0a/6] Bun not found — installing via bun.sh...
+    echo  [0a/6] Bun not found - installing via bun.sh...
     echo.
     powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://bun.sh/install.ps1 | iex"
     if %errorlevel% neq 0 (
@@ -45,7 +49,7 @@ if not exist "node_modules" (
     echo.
 )
 
-echo  [1/6] Init — detect stack, YAML, PROJECT_MEMORY.md...
+echo  [1/6] Init - detect stack, YAML, PROJECT_MEMORY.md...
 echo.
 call bun run src/cli.ts init ..
 if %errorlevel% neq 0 (
@@ -55,42 +59,42 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-echo  [2/6] Upgrade — migrate legacy names/refs...
+echo  [2/6] Upgrade - migrate legacy names/refs...
 echo.
 call bun run src/cli.ts upgrade .. --dry-run
 call bun run src/cli.ts upgrade .. --yes --prune
 if %errorlevel% neq 0 (
-    echo  [WARN] upgrade reported issues — continuing.
+    echo  [WARN] upgrade reported issues - continuing.
 )
 echo.
 
-echo  [3/6] Idea — ensure idea.md template if missing...
+echo  [3/6] Idea - ensure idea.md template if missing...
 echo.
 call bun run src/cli.ts ensure-idea ..
 echo.
 
-rem Paths relative to parent target (..) — not ../ which would resolve to grandparent
+rem On Windows idea.md and IDEA.md are the same file - take first match only.
+rem Paths are relative to parent target (..), not ..\ (grandparent).
 set "IDEA="
-if exist "..\idea.md" set "IDEA=idea.md"
-if exist "..\IDEA.md" set "IDEA=IDEA.md"
-if exist "..\plan.md" set "IDEA=plan.md"
-if exist "..\PLAN.md" set "IDEA=PLAN.md"
-if exist "..\idea.txt" set "IDEA=idea.txt"
+if not defined IDEA if exist "..\idea.md" set "IDEA=idea.md"
+if not defined IDEA if exist "..\plan.md" set "IDEA=plan.md"
+if not defined IDEA if exist "..\PLAN.md" set "IDEA=PLAN.md"
+if not defined IDEA if exist "..\idea.txt" set "IDEA=idea.txt"
 
 if defined IDEA (
-    echo  [4/6] plan-from — phases from %IDEA%...
+    echo  [4/6] plan-from - phases from %IDEA%...
     echo.
     call bun run src/cli.ts plan-from %IDEA% ..
     if %errorlevel% neq 0 (
-        echo  [WARN] plan-from failed — continuing.
+        echo  [WARN] plan-from failed - continuing.
     )
     echo.
 ) else (
-    echo  [4/6] plan-from — skipped
+    echo  [4/6] plan-from - skipped
     echo.
 )
 
-echo  [5/6] Generate — AGENTS.md + adapters + start prompt...
+echo  [5/6] Generate - AGENTS.md + adapters + start prompt...
 echo.
 if not exist "..\universal-agent.yaml" (
     echo  [FAIL] universal-agent.yaml missing in parent after init.
@@ -106,14 +110,14 @@ if %errorlevel% neq 0 (
 call bun run src/cli.ts write-prompt ..
 echo.
 
-echo  [6/6] Doctor — readiness check...
+echo  [6/6] Doctor - readiness check...
 echo.
 call bun run src/cli.ts doctor ..
 set DOCTOR_EXIT=%errorlevel%
 echo.
 
 echo  ====================================
-echo   Done — 3 steps left for you
+echo   Done - 3 steps left for you
 echo  ====================================
 echo.
 echo  Product files ^(PARENT folder^):
@@ -138,7 +142,7 @@ echo.
 echo  Re-run setup-all.bat after editing idea.md or universal-agent.yaml.
 echo.
 if %DOCTOR_EXIT% neq 0 (
-    echo  [NOTE] doctor reported gaps — see tips above.
+    echo  [NOTE] doctor reported gaps - see tips above.
 ) else (
     echo  [OK] doctor score looks good.
 )

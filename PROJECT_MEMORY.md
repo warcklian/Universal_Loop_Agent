@@ -29,6 +29,7 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - [x] setup-all.bat as sole Windows entry for all users (init+upgrade+plan-from+generate+doctor)
 - [x] UX polish: README 3 steps, idea template, start prompt, DoD/resume, doctor tips
 - [x] Post-review defect fixes (legacy memory migrate, plan-from paths, phases regex, adopt, dry-run)
+- [x] Consumer-run hardening (skip nested toolkit, keep Indice.md, skip empty idea template, console UTF-8)
 - [ ] Public npm packaging (optional)
 
 ## Open items
@@ -36,10 +37,10 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - Public npm packaging (currently `private: true`)
 - Multi-agent file-locking runtime (still documentary)
 - e2e/coverage suites if those scripts are published in YAML
+- After copy to ComfyUI: restore Indice.md if renamed; refresh nested toolkit; edit idea.md then re-run setup-all
 
 ## Recent status
 
-Post-review fixes: `ensureCanonicalMemory` migrates `MEMORIA_PROYECTO.md` before seeding;
-`setup-all` passes idea paths relative to parent; `plan-from` phases replace without `\z` bug;
-`adopt` avoids duplicate YAML keys; `upgrade --dry-run` does not write reports (portable `root: "."` when applied).
-22 tests pass.
+ComfyUI setup-all log reviewed. Hardened toolkit: upgrade skips nested `Universal_Loop_Agent`,
+no longer renames product `Indice.md`, plan-from skips empty idea template, setup-all uses UTF-8.
+24 tests pass.

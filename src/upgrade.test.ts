@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { buildUpgradePlan, runUpgrade } from "./upgrade.ts"
+import { buildUpgradePlan, discoverFiles, runUpgrade } from "./upgrade.ts"
 
 function makeLegacyProject(tag: string): string {
   const root = join(tmpdir(), `uagent-upgrade-${tag}-${Date.now()}`)
@@ -15,6 +15,7 @@ function makeLegacyProject(tag: string): string {
     "utf-8",
   )
   writeFileSync(join(root, "Indice.md"), "# Indice\n\nTree here\n", "utf-8")
+  writeFileSync(join(root, "AGENTS_LOOP.md"), "# Legacy loop\n", "utf-8")
   writeFileSync(
     join(root, "docs", "notes.md"),
     "Read MEMORIA_PROYECTO.md and Indice.md please.\n",
@@ -61,7 +62,8 @@ describe("upgrade", () => {
     try {
       const plan = buildUpgradePlan(root, { batchSize: 50 })
       expect(plan.renames.some((r) => r.fromPath.endsWith("MEMORIA_PROYECTO.md"))).toBe(true)
-      expect(plan.renames.some((r) => r.fromPath.endsWith("Indice.md"))).toBe(true)
+      expect(plan.renames.some((r) => r.fromPath.endsWith("AGENTS_LOOP.md"))).toBe(true)
+      expect(plan.renames.some((r) => r.fromPath.endsWith("Indice.md"))).toBe(false)
       expect(plan.refHits.length).toBeGreaterThan(0)
 
       runUpgrade(root, { dryRun: true, yes: true, batchSize: 50 })
@@ -73,7 +75,7 @@ describe("upgrade", () => {
     }
   })
 
-  test("apply renames files, rewrites refs, syncs memory, verifies", () => {
+  test("apply renames memory/agents but leaves Indice.md alone", () => {
     const root = makeLegacyProject("apply")
     try {
       const { report } = runUpgrade(root, {
@@ -84,9 +86,10 @@ describe("upgrade", () => {
       })
 
       expect(existsSync(join(root, "MEMORIA_PROYECTO.md"))).toBe(false)
-      expect(existsSync(join(root, "Indice.md"))).toBe(false)
+      expect(existsSync(join(root, "AGENTS_LOOP.md"))).toBe(false)
       expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(true)
-      expect(existsSync(join(root, "Index.md"))).toBe(true)
+      expect(existsSync(join(root, "Indice.md"))).toBe(true)
+      expect(existsSync(join(root, "Index.md"))).toBe(false)
 
       const yaml = readFileSync(join(root, "universal-agent.yaml"), "utf-8")
       expect(yaml).toContain("PROJECT_MEMORY.md")
@@ -94,13 +97,12 @@ describe("upgrade", () => {
 
       const notes = readFileSync(join(root, "docs", "notes.md"), "utf-8")
       expect(notes).toContain("PROJECT_MEMORY.md")
-      expect(notes).toContain("Index.md")
+      expect(notes).toContain("Indice.md")
       expect(notes).not.toContain("MEMORIA_PROYECTO.md")
-      expect(notes).not.toContain("Indice.md")
 
       const memory = readFileSync(join(root, "PROJECT_MEMORY.md"), "utf-8")
       expect(memory).not.toContain("MEMORIA_PROYECTO.md")
-      expect(memory).not.toContain("Indice.md")
+      expect(memory).toContain("Indice.md")
 
       expect(existsSync(join(root, "AGENTS.md"))).toBe(true)
       expect(existsSync(join(root, ".uagent", "upgrade-report.json"))).toBe(true)
@@ -130,6 +132,36 @@ describe("upgrade", () => {
       expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(true)
       expect(report.applied.pruned.some((p) => p.includes("MEMORIA_PROYECTO.md"))).toBe(true)
       expect(report.verify.ok).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("skips nested Universal_Loop_Agent toolkit folder", () => {
+    const root = join(tmpdir(), `uagent-upgrade-nested-${Date.now()}`)
+    const toolkit = join(root, "Universal_Loop_Agent")
+    mkdirSync(join(toolkit, "src"), { recursive: true })
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "app" }), "utf-8")
+    writeFileSync(join(root, "MEMORIA_PROYECTO.md"), "# parent mem\n", "utf-8")
+    writeFileSync(join(toolkit, "setup-all.bat"), "@echo off\n", "utf-8")
+    writeFileSync(join(toolkit, "src", "cli.ts"), "export {}\n", "utf-8")
+    writeFileSync(
+      join(toolkit, "package.json"),
+      JSON.stringify({ name: "uagent" }),
+      "utf-8",
+    )
+    writeFileSync(
+      join(toolkit, "src", "upgrade.ts"),
+      'from: "MEMORIA_PROYECTO.md"\n',
+      "utf-8",
+    )
+    try {
+      const { textFiles } = discoverFiles(root, 50)
+      expect(textFiles.some((f) => f.startsWith("Universal_Loop_Agent/"))).toBe(false)
+
+      runUpgrade(root, { dryRun: false, yes: true, prune: true, batchSize: 50 })
+      expect(readFileSync(join(toolkit, "src", "upgrade.ts"), "utf-8")).toContain("MEMORIA_PROYECTO.md")
+      expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(true)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

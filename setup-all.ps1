@@ -73,20 +73,20 @@ Write-Host ""
 bun run src/cli.ts ensure-idea ..
 Write-Host ""
 
-# Paths relative to parent target (..) — not ..\ which would resolve to grandparent
-$ideaCandidates = @("idea.md", "IDEA.md", "plan.md", "PLAN.md", "idea.txt")
+# Paths relative to parent target (..) — first match only (Windows is case-insensitive)
+$ideaCandidates = @("idea.md", "plan.md", "PLAN.md", "idea.txt")
 $idea = $ideaCandidates | Where-Object { Test-Path (Join-Path ".." $_) } | Select-Object -First 1
 
 if ($idea) {
-    Write-Host "  [4/6] plan-from — phases from $idea..." -ForegroundColor White
+    Write-Host "  [4/6] plan-from - phases from $idea..." -ForegroundColor White
     Write-Host ""
     bun run src/cli.ts plan-from $idea ..
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  [WARN] plan-from failed — continuing." -ForegroundColor Yellow
+        Write-Host "  [WARN] plan-from failed - continuing." -ForegroundColor Yellow
     }
     Write-Host ""
 } else {
-    Write-Host "  [4/6] plan-from — skipped" -ForegroundColor Gray
+    Write-Host "  [4/6] plan-from - skipped" -ForegroundColor Gray
     Write-Host ""
 }
 

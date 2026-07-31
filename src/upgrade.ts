@@ -43,13 +43,6 @@ export const MIGRATIONS: Migration[] = [
     description: "Canonical handoff filename (Spanish → English)",
   },
   {
-    id: "repo-index-en",
-    kind: "file_rename",
-    from: "Indice.md",
-    to: "Index.md",
-    description: "Repository navigation index (Spanish → English)",
-  },
-  {
     id: "agents-loop-filename",
     kind: "file_rename",
     from: "AGENTS_LOOP.md",
@@ -64,13 +57,6 @@ export const MIGRATIONS: Migration[] = [
     description: "String references to legacy canonical memory",
   },
   {
-    id: "token-indice",
-    kind: "token",
-    from: "Indice.md",
-    to: "Index.md",
-    description: "String references to legacy index",
-  },
-  {
     id: "token-agents-loop",
     kind: "token",
     from: "AGENTS_LOOP.md",
@@ -78,6 +64,12 @@ export const MIGRATIONS: Migration[] = [
     description: "String references to legacy AGENTS_LOOP.md",
   },
 ]
+
+/**
+ * Do not auto-rename Indice.md → Index.md.
+ * Consumer projects often keep Indice.md as their navigation map; forcing Index
+ * corrupts product docs when the toolkit is nested. New toolkit docs use Index.md.
+ */
 
 const SKIP_DIR_NAMES = new Set([
   ".git",
@@ -230,8 +222,30 @@ export interface UpgradeReport {
   }
 }
 
-function shouldSkipDir(name: string): boolean {
-  return SKIP_DIR_NAMES.has(name)
+function shouldSkipDir(name: string, fullPath: string): boolean {
+  if (SKIP_DIR_NAMES.has(name)) return true
+  return isNestedToolkitDir(fullPath, name)
+}
+
+/** Nested copy of this toolkit must never be rewritten by consumer upgrade. */
+export function isNestedToolkitDir(dirPath: string, name: string): boolean {
+  const lower = name.toLowerCase().replace(/-/g, "_")
+  if (lower === "universal_loop_agent" || lower.includes("universal_loop_agent")) {
+    return true
+  }
+  try {
+    const hasEntry = existsSync(join(dirPath, "setup-all.bat")) || existsSync(join(dirPath, "setup-all.ps1"))
+    const hasCli = existsSync(join(dirPath, "src", "cli.ts"))
+    if (!hasEntry || !hasCli) return false
+    const pkgPath = join(dirPath, "package.json")
+    if (existsSync(pkgPath)) {
+      const raw = readFileSync(pkgPath, "utf-8")
+      if (/"name"\s*:\s*"uagent"/i.test(raw)) return true
+    }
+    return true
+  } catch {
+    return false
+  }
 }
 
 function isProbablyTextFile(filePath: string): boolean {
@@ -286,7 +300,7 @@ export function discoverFiles(
       }
 
       if (st.isDirectory()) {
-        if (shouldSkipDir(name)) continue
+        if (shouldSkipDir(name, full)) continue
         // Do not descend into .uagent here; memory stubs are scanned below
         if (name === ".uagent") continue
         stack.push(full)
@@ -757,6 +771,10 @@ export function formatUpgradeSummary(result: UpgradeResult): string {
     lines.push("  Leftover:")
     for (const L of report.verify.leftoverLegacy.slice(0, 20)) lines.push(`    - ${L}`)
   }
-  lines.push(`\n  Report: .uagent/upgrade-report.json\n`)
+  if (!report.dryRun) {
+    lines.push(`\n  Report: .uagent/upgrade-report.json\n`)
+  } else {
+    lines.push(`\n  Dry-run — no report written.\n`)
+  }
   return lines.join("\n")
 }

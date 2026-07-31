@@ -105,11 +105,29 @@ describe("plan-from", () => {
       )
       writeFileSync(join(root, "package.json"), JSON.stringify({ name: "plan-demo" }), "utf-8")
       const result = planFromIdea(root, "idea.md")
+      expect(result.skipped).toBe(false)
       expect(result.phases.length).toBeGreaterThanOrEqual(3)
       const mem = readFileSync(join(root, "PROJECT_MEMORY.md"), "utf-8")
       expect(mem).toContain("## Phases")
       expect(mem).toContain("Auth")
       expect(mem).toContain("- [ ]")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("skips unfilled idea template instead of fake Goal/Must have phases", () => {
+    const root = tmpRoot("plan-empty")
+    try {
+      writeFileSync(join(root, "package.json"), JSON.stringify({ name: "empty-idea" }), "utf-8")
+      const created = ensureIdeaFile(root)
+      expect(created.created).toBe(true)
+      const before = "# Project memory\n\n## Phases\n\n- [ ] Keep me\n"
+      writeFileSync(join(root, CANONICAL_MEMORY_FILE), before, "utf-8")
+      const result = planFromIdea(root, "idea.md")
+      expect(result.skipped).toBe(true)
+      expect(result.phases).toEqual([])
+      expect(readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")).toBe(before)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -145,7 +163,6 @@ describe("plan-from", () => {
         "utf-8",
       )
       writeFileSync(join(root, "package.json"), JSON.stringify({ name: "plan-rel" }), "utf-8")
-      // Same argv shape as setup-all: plan-from idea.md <parent>
       const result = planFromIdea(root, "idea.md")
       expect(result.phases.some((p) => /Authorize/i.test(p))).toBe(true)
       const mem = readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")

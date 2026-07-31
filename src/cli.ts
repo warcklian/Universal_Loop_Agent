@@ -216,6 +216,10 @@ program
       console.log(`\n  ${result.message}`)
       console.log(`  Idea:   ${result.ideaFile}`)
       console.log(`  Memory: ${result.memoryFile}`)
+      if (result.skipped || result.phases.length === 0) {
+        console.log(`\n  Skipped writing phases. Edit the idea/plan, then re-run setup-all.\n`)
+        return
+      }
       console.log(`  Phases:`)
       result.phases.forEach((p, i) => console.log(`    ${i + 1}. ${p}`))
       console.log(`\n  Load AGENTS.md and ask the agent to implement remaining phases.\n`)
