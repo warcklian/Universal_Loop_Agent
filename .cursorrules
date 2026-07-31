@@ -1,6 +1,6 @@
 # Cursor rules — Universal Loop Agent
 
-Plan: `Universal_Loop_Agent_Plan.md`. Índice: `Indice.md`.
+Plan: `Universal_Loop_Agent_Plan.md`. Index: `Index.md`.
 
 ## Stack
 
@@ -11,11 +11,14 @@ Plan: `Universal_Loop_Agent_Plan.md`. Índice: `Indice.md`.
 ## Workflow
 
 - Config source: `universal-agent.yaml` → `uagent generate` → `AGENTS.md`.
-- Canonical handoff: `MEMORIA_PROYECTO.md` at project root; `.uagent/memory/` is stubs only.
+- Canonical handoff: `PROJECT_MEMORY.md` at project root; `.uagent/memory/` is stubs only.
 - Paths in versioned files must be relative (portable across machines).
-- After substantive changes: `bun test`, `bun run typecheck`, update plan/índice if structure changed.
+- Product filenames and defaults are English-only.
+- After substantive changes: `bun test`, `bun run typecheck`, update plan/Index if structure changed.
 
 ## Ownership (this repo)
 
-- core: `src/schema.ts`, `src/parser.ts`, `src/generator.ts`, `src/cli.ts`, `src/detector.ts`, `src/memory.ts`, `src/yaml-generator.ts`
+- core: `src/schema.ts`, `src/parser.ts`, `src/generator.ts`, `src/cli.ts`, `src/detector.ts`, `src/memory.ts`, `src/yaml-generator.ts`, `src/upgrade.ts`, `src/loop-defaults.ts`, `src/adapters.ts`, `src/adopt.ts`, `src/plan-from.ts`, `src/doctor.ts`
 - sections (integrator): `src/sections/**`
+- Prefer `uagent upgrade --dry-run` before applying migrations on existing projects.
+- Consumer products must not couple to this toolkit folder; product owns PROJECT_MEMORY.md / AGENTS.md / universal-agent.yaml / .uagent/memory / optional adapters.

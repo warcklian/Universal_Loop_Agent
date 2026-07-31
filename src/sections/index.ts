@@ -1,4 +1,5 @@
 import type { SourceConfig } from "../schema.ts"
+import { loopActivationLines } from "../loop-defaults.ts"
 
 function list(items: string[]): string {
   return items.join("\n")
@@ -95,12 +96,16 @@ export function sectionAgentLoop(s: SourceConfig): string | null {
   if (!loop) return null
   const lines = ["## Agent Loop"]
   lines.push("")
-  lines.push("This section defines how the agent loop behaves. Load this file to activate loop mode.")
+  lines.push(
+    "This section defines autonomous loop behavior. Load this file in chat to activate loop mode together with portable project memory.",
+  )
   lines.push("")
 
   if (loop.max_iterations !== undefined) lines.push(bullet(`**Max iterations:** ${loop.max_iterations}`))
   if (loop.timeout_seconds !== undefined) lines.push(bullet(`**Timeout:** ${loop.timeout_seconds}s`))
-  if (loop.doom_loop_detection) lines.push(bullet("**Doom loop detection:** enabled — stops if no progress in 3 iterations"))
+  if (loop.doom_loop_detection) {
+    lines.push(bullet("**Doom loop detection:** enabled — stop if no progress in 3 iterations"))
+  }
 
   if (loop.rules?.length) {
     lines.push("")
@@ -112,11 +117,7 @@ export function sectionAgentLoop(s: SourceConfig): string | null {
   }
 
   lines.push("")
-  lines.push("### How to use")
-  lines.push("")
-  lines.push("- **Loop mode:** Load this file in your agent (Claude Code, Cursor, OpenCode, etc.)")
-  lines.push("- **Prompt mode:** Work without loading this file — no loop behavior activates")
-  lines.push("- **AGENTS.md** = agent rules/loop only; project handoff memory is `MEMORIA_PROYECTO.md` (or `multi_agent.memory.canonical_file`)")
+  lines.push(...loopActivationLines())
 
   return lines.join("\n")
 }
@@ -128,7 +129,7 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
   lines.push("")
 
   if (ma.memory) {
-    const canonical = ma.memory.canonical_file || "MEMORIA_PROYECTO.md"
+    const canonical = ma.memory.canonical_file || "PROJECT_MEMORY.md"
     lines.push("### Shared Memory")
     lines.push("")
     lines.push(bullet(`**Enabled:** ${ma.memory.enabled !== false ? "yes" : "no"}`))
@@ -136,7 +137,9 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
     if (ma.memory.path) {
       lines.push(bullet(`**uagent stubs path:** \`${ma.memory.path}\` (pointers only; do not duplicate the diary there)`))
     }
-    if (ma.memory.auto_sync) lines.push(bullet("**Auto-sync:** enabled — keep `MEMORIA_PROYECTO.md` (canonical) up to date after substantive work"))
+    if (ma.memory.auto_sync) {
+      lines.push(bullet(`**Auto-sync:** enabled — keep \`${canonical}\` (canonical) up to date after substantive work`))
+    }
     lines.push("")
     lines.push("At the start of substantive work, read the canonical memory file. After finishing a delivery, update it (date, open items, short summary). Editor-local memory does not travel with the repo.")
   }

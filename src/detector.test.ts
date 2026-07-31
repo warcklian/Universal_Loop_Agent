@@ -51,6 +51,33 @@ describe("detectProject", () => {
       expect(p.packageManagers).toContain("npm")
       expect(p.buildCommands.dev).toBe("npm run dev")
       expect(p.buildCommands.install).toBe("npm install")
+      expect(Array.isArray(p.topModules)).toBe(true)
+      expect(Array.isArray(p.layoutHints)).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("light deep scan reads README and src modules", () => {
+    const root = makeTempProject("deep", {
+      "package.json": JSON.stringify({
+        name: "deep-demo",
+        description: "pkg desc",
+        scripts: { test: "echo", lint: "echo" },
+      }),
+      "README.md": "# Deep\n\nThis is a portable demo app for agents.\n\n## More\nIgnore me\n",
+      "src/cli/main.ts": "export {}",
+      "src/memory/store.ts": "export {}",
+      "bun.lock": "",
+    })
+    try {
+      const p = detectProject(root)
+      expect(p.description).toContain("portable demo app")
+      expect(p.topModules).toContain("src/cli")
+      expect(p.topModules).toContain("src/memory")
+      expect(p.scriptNames).toContain("test")
+      expect(p.layoutHints.some((h) => h.includes("Source root"))).toBe(true)
+      expect(p.languages).toContain("typescript")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -61,11 +88,13 @@ describe("parse + generate", () => {
   test("validates repo universal-agent.yaml and emits AGENTS.md", () => {
     const source = parseSource("universal-agent.yaml")
     expect(source.project.name).toBe("Universal Loop Agent")
-    expect(source.multi_agent?.memory?.canonical_file).toBe("MEMORIA_PROYECTO.md")
+    expect(source.multi_agent?.memory?.canonical_file).toBe("PROJECT_MEMORY.md")
     const out = generate(source)
     expect(out.file).toBe("AGENTS.md")
-    expect(out.content).toContain("MEMORIA_PROYECTO.md")
+    expect(out.content).toContain("PROJECT_MEMORY.md")
     expect(out.content).toContain("src/detector.ts")
+    expect(out.content).toContain("Autonomous phased delivery")
+    expect(out.content).toContain("Tool vs product")
   })
 })
 
@@ -81,9 +110,16 @@ describe("generateYaml", () => {
     try {
       const project = detectProject(root)
       const yaml = generateYaml(project)
-      expect(yaml.multi_agent.memory.canonical_file).toBe("MEMORIA_PROYECTO.md")
+      expect(yaml.multi_agent.memory.canonical_file).toBe("PROJECT_MEMORY.md")
       expect(yaml.build.install).toBe("bun install")
       expect(yaml.testing.unit).toBe("bun run test")
+      expect(yaml.agent_loop.max_iterations).toBe(30)
+      expect(yaml.agent_loop.rules.some((r) => r.instruction.includes("Autonomous phased"))).toBe(
+        true,
+      )
+      expect(yaml.universal_instructions).toContain("toolkit is not product code")
+      expect(yaml.universal_instructions).not.toContain("Universal_Loop_Agent/generate")
+      expect(yaml.project.description.length).toBeGreaterThan(5)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

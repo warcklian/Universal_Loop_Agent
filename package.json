@@ -2,6 +2,12 @@
   "name": "uagent",
   "version": "0.1.0",
   "description": "Universal agent config generator — auto-adapts to any project stack",
+  "license": "MIT",
+  "author": "Jorge Octavio Gomez Gonzalez (Warcklian)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/warcklian/Universal_Loop_Agent.git"
+  },
   "module": "src/cli.ts",
   "type": "module",
   "bin": {

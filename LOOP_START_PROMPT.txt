@@ -1,0 +1,3 @@
+# Copy everything below into your AI chat after loading AGENTS.md
+
+Load AGENTS.md (loop mode). Read PROJECT_MEMORY.md and idea.md (or the plan). Implement the project phase by phase until all phases are done. For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase. Do not ask me to say continue between successful phases. Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop). If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.

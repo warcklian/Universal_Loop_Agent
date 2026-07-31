@@ -3,14 +3,14 @@ import { join } from "node:path"
 import type { DetectedProject } from "./detector.ts"
 
 /** Canonical portable handoff at project root (survives folder/machine moves). */
-export const CANONICAL_MEMORY_FILE = "MEMORIA_PROYECTO.md"
+export const CANONICAL_MEMORY_FILE = "PROJECT_MEMORY.md"
 
 export interface MemoryFile {
   path: string
   content: string
 }
 
-function createMemoriaProyectoSeed(project: DetectedProject): string {
+function createProjectMemorySeed(project: DetectedProject): string {
   const stackBits: string[] = []
   if (project.languages.length) stackBits.push(`Languages: ${project.languages.join(", ")}`)
   if (project.frameworks.length) stackBits.push(`Frameworks: ${project.frameworks.join(", ")}`)
@@ -18,35 +18,57 @@ function createMemoriaProyectoSeed(project: DetectedProject): string {
   if (project.databases.length) stackBits.push(`Databases: ${project.databases.join(", ")}`)
 
   return [
-    "# Memoria del proyecto (canónica)",
+    "# Project memory (canonical)",
     "",
-    "**Fuente única** de handoff entre sesiones, equipos e IAs. Viaja con el repositorio",
-    "(cualquier carpeta o unidad). No sustituye el plan maestro ni la documentación operativa.",
+    "**Single source of truth** for handoff across sessions, teams, and AI tools.",
+    "Travels with the repository (any folder or drive). Does not replace the master plan or ops docs.",
     "",
-    `| Relacionado | Rol |`,
-    `|-------------|-----|`,
-    `| \`AGENTS.md\` | Reglas del agente / loop; debe leer y actualizar **este** archivo |`,
-    `| \`.uagent/memory/\` | Stubs que apuntan aquí (multi-agente / uagent) |`,
+    `| Related | Role |`,
+    `|---------|------|`,
+    `| \`AGENTS.md\` | Agent / loop rules; must read and update **this** file |`,
+    `| \`.uagent/memory/\` | Stubs that point here (multi-agent / uagent) |`,
     "",
-    `**Proyecto:** ${project.name}`,
+    `**Project:** ${project.name}`,
     "",
-    stackBits.length ? `**Stack detectado:** ${stackBits.join(" · ")}` : "",
+    stackBits.length ? `**Detected stack:** ${stackBits.join(" · ")}` : "",
     "",
-    `**Última actualización:** ${new Date().toISOString().slice(0, 10)} (init uagent)`,
+    `**Last updated:** ${new Date().toISOString().slice(0, 10)} (uagent init)`,
     "",
     "---",
     "",
-    "## Pendientes",
+    "## Phases",
     "",
-    "_Listar aquí lo abierto para la siguiente sesión._",
+    "_Ordered delivery checklist. Mark `[x]` only after Definition of Done for that phase._",
     "",
-    "## Estado reciente",
+    "**Definition of Done (each phase):** code in place → tests/checks pass → note key paths → mark `[x]` → next phase.",
     "",
-    "_Tras cada entrega sustantiva: 1 párrafo + archivos clave tocados._",
+    "- [ ] Phase 1 — _title_",
+    "- [ ] Phase 2 — _title_",
+    "- [ ] Phase 3 — _title_",
     "",
-    "### Cómo actualizar",
+    "## Current phase",
     "",
-    "Fecha, pendientes si cambian, resumen breve. No duplicar runbooks ni el changelog del plan.",
+    "_Name of the phase in progress, or `none` if idle/complete._",
+    "",
+    "## In progress",
+    "",
+    "_What is actively being built right now._",
+    "",
+    "## Blocked",
+    "",
+    "_Secrets, ambiguity, or irreversible decisions waiting on the user — or `none`._",
+    "",
+    "## Open items",
+    "",
+    "_List work left open for the next session._",
+    "",
+    "## Recent status",
+    "",
+    "_After each phase: 1 paragraph + key paths touched. On resume, start from the first unchecked phase._",
+    "",
+    "### How to update",
+    "",
+    "Date, current phase, checkboxes, blockers, short summary. Do not duplicate runbooks or the plan changelog.",
     "",
   ]
     .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
@@ -57,12 +79,12 @@ function stubContext(): string {
   return [
     "# Project Context (stub)",
     "",
-    "La memoria canónica del proyecto está en la **raíz del repositorio**:",
+    "Canonical project memory lives at the **repository root**:",
     "",
     `**[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})**`,
     "",
-    "No escriba el handoff aquí. Actualice siempre ese archivo.",
-    "Esta carpeta `.uagent/memory/` existe para el loop multi-agente (uagent); los archivos son punteros.",
+    "Do not write the handoff here. Always update that file.",
+    "This `.uagent/memory/` folder exists for the multi-agent loop (uagent); files are pointers only.",
     "",
   ].join("\n")
 }
@@ -71,10 +93,10 @@ function stubDecisions(): string {
   return [
     "# Decisions Log (stub)",
     "",
-    `Decisiones de producto/arquitectura: plan maestro del proyecto y, si aplica, notas en`,
+    `Product/architecture decisions: project master plan and, if needed, notes in`,
     `**[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})**.`,
     "",
-    "No mantenga un segundo diario aquí.",
+    "Do not keep a second diary here.",
     "",
   ].join("\n")
 }
@@ -83,9 +105,9 @@ function stubSessionLog(): string {
   return [
     "# Session Log (stub)",
     "",
-    `Handoff entre sesiones: **[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})** (raíz del repo).`,
+    `Session handoff: **[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})** (repo root).`,
     "",
-    "Opcional: anotar un renglón aquí **además** de actualizar la memoria canónica, nunca en su lugar.",
+    "Optional: add one line here **in addition to** updating canonical memory, never instead of it.",
     "",
   ].join("\n")
 }
@@ -94,7 +116,7 @@ function stubAgent(agentName: string): string {
   return [
     `# Agent: ${agentName} (stub)`,
     "",
-    `Memoria compartida del proyecto: **[\`${CANONICAL_MEMORY_FILE}\`](../../../${CANONICAL_MEMORY_FILE})**.`,
+    `Shared project memory: **[\`${CANONICAL_MEMORY_FILE}\`](../../../${CANONICAL_MEMORY_FILE})**.`,
     "",
   ].join("\n")
 }
@@ -102,7 +124,7 @@ function stubAgent(agentName: string): string {
 function createIndexFile(project: DetectedProject): string {
   return JSON.stringify(
     {
-      version: "1.1.0",
+      version: "1.2.0",
       project: project.name,
       canonicalMemory: CANONICAL_MEMORY_FILE,
       note: "Canonical handoff lives at repo root. Files under .uagent/memory/ are stubs only.",
@@ -126,14 +148,14 @@ export function getMemoryFiles(project: DetectedProject): MemoryFile[] {
   ]
 }
 
-/** Create root MEMORIA_PROYECTO.md only if missing (never overwrite). */
+/** Create root PROJECT_MEMORY.md only if missing (never overwrite). */
 export function ensureCanonicalMemory(targetDir: string, project: DetectedProject): void {
-  const memoriaPath = join(targetDir, CANONICAL_MEMORY_FILE)
-  if (existsSync(memoriaPath)) {
+  const memoryPath = join(targetDir, CANONICAL_MEMORY_FILE)
+  if (existsSync(memoryPath)) {
     console.log(`  ${CANONICAL_MEMORY_FILE} already exists — left unchanged`)
     return
   }
-  writeFileSync(memoriaPath, createMemoriaProyectoSeed(project), "utf-8")
+  writeFileSync(memoryPath, createProjectMemorySeed(project), "utf-8")
   console.log(`  Created ${CANONICAL_MEMORY_FILE} (canonical portable memory)`)
 }
 
