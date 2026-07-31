@@ -1,5 +1,22 @@
 # Universal_Loop_Agent — Master plan
 
+## Registro — 2026-07-30 (plan-from Constraints/Notes)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | No tratar Constraints/Notes como fases |
+| **Goal** | plan-from solo usa Must have / Nice to have / ## custom |
+| **Scope** | `plan-from.ts`, `templates/idea.md`, tests |
+| **Status** | Completed |
+
+### Entregado
+
+- Cuerpo de Goal / Constraints / Notes ignorado al derivar fases
+- Filtro extra para filas Stack / Do not use / Deadline
+- Plantilla documenta que Constraints/Notes no son fases
+
+---
+
 ## Registro — 2026-07-30 (setup-all on nested ComfyUI)
 
 | Field | Value |

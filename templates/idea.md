@@ -18,10 +18,14 @@ _One or two sentences: what success looks like._
 
 ## Constraints
 
+_Context for the agent — not delivery phases. plan-from ignores this section._
+
 - Stack / language (if known): _
 - Do not use: _
 - Deadline / scope limits: _
 
 ## Notes
+
+_Background only — not delivery phases. plan-from ignores this section._
 
 _Paste sketches, links, or acceptance criteria here._

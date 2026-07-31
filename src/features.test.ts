@@ -133,6 +133,61 @@ describe("plan-from", () => {
     }
   })
 
+  test("skips Constraints and Notes body even when filled", () => {
+    const root = tmpRoot("plan-constraints")
+    try {
+      writeFileSync(
+        join(root, "idea.md"),
+        [
+          "# Project idea",
+          "",
+          "Describe what you want to build.",
+          "",
+          "## Goal",
+          "",
+          "Ship a stable ComfyUI portable setup.",
+          "",
+          "## Must have",
+          "",
+          "1. Launcher adaptativo con flags seguros",
+          "2. Indice.md y plan sincronizados",
+          "3. Pipelines documentados en docs/",
+          "",
+          "## Nice to have",
+          "",
+          "- Perfiles LTX dinamicos por VRAM",
+          "",
+          "## Constraints",
+          "",
+          "- Stack / language (if known): Python, ComfyUI, PyTorch",
+          "- Do not use: rutas absolutas de maquina",
+          "- Deadline / scope limits: solo reparar setup esta sesion",
+          "",
+          "## Notes",
+          "",
+          "- Arranque: run_nvidia_gpu.bat",
+          "- Toolkit Universal_Loop_Agent/ no es codigo de producto",
+          "",
+        ].join("\n"),
+        "utf-8",
+      )
+      writeFileSync(join(root, "package.json"), JSON.stringify({ name: "comfy-phases" }), "utf-8")
+      const result = planFromIdea(root, "idea.md")
+      expect(result.skipped).toBe(false)
+      expect(result.phases.length).toBe(4)
+      expect(result.phases.some((p) => /Launcher/i.test(p))).toBe(true)
+      expect(result.phases.some((p) => /Indice/i.test(p))).toBe(true)
+      expect(result.phases.some((p) => /LTX/i.test(p))).toBe(true)
+      expect(result.phases.some((p) => /Stack\s*\/\s*language/i.test(p))).toBe(false)
+      expect(result.phases.some((p) => /Do not use/i.test(p))).toBe(false)
+      expect(result.phases.some((p) => /Deadline/i.test(p))).toBe(false)
+      expect(result.phases.some((p) => /run_nvidia_gpu/i.test(p))).toBe(false)
+      expect(result.phases.some((p) => /Universal_Loop_Agent/i.test(p))).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   test("upsertPhasesSection keeps text containing z and following sections", () => {
     const memory = [
       "# Mem",

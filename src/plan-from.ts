@@ -15,13 +15,22 @@ export interface PlanFromResult {
 const TEMPLATE_SECTION_TITLES =
   /^(goal|must have|nice to have|constraints|notes|project idea|open items|recent status|phases|how to|pendientes|estado)$/i
 
+/** Under these H2s, list/checkbox items are metadata — never become phases. */
+const SKIP_SECTION_BODY =
+  /^(goal|constraints|notes|project idea|open items|recent status|how to|pendientes|estado)$/i
+
 function isPlaceholderItem(text: string): boolean {
   const t = text.trim()
   if (!t || t === "_" || /^_+$/.test(t)) return true
   if (/^[-*]\s*_+$/.test(t)) return true
   if (/^\d+[\).]\s*_+$/.test(t)) return true
-  if (/^(stack|do not use|deadline).*: _$/i.test(t)) return true
+  if (/^(stack|do not use|deadline).*:/i.test(t) && /:\s*_+$/.test(t)) return true
   return false
+}
+
+/** Filled Constraints rows (and similar) must not become delivery phases. */
+function isConstraintMetaItem(text: string): boolean {
+  return /^(stack\s*\/\s*language|do not use|deadline\s*\/\s*scope)/i.test(text.trim())
 }
 
 /** True when idea.md is still the bundled empty template (or equivalent). */
@@ -48,29 +57,46 @@ export function isUnfilledIdeaTemplate(text: string): boolean {
   return stripped.length < 20
 }
 
+/**
+ * Derive phases from Must have / Nice to have / custom ## sections.
+ * Never turn Goal, Constraints, or Notes body items into phases.
+ */
 export function extractPhases(text: string): string[] {
   if (isUnfilledIdeaTemplate(text)) return []
 
   const lines = text.split(/\r?\n/)
   const phases: string[] = []
+  let currentSection: string | null = null
 
   for (const line of lines) {
     const h2 = line.match(/^##\s+(.+)$/)
     if (h2?.[1]) {
       const title = h2[1].trim()
+      currentSection = title
+      // Custom section titles (not template scaffolding) are phases themselves
       if (!TEMPLATE_SECTION_TITLES.test(title)) {
         phases.push(title)
       }
       continue
     }
+
+    if (currentSection && SKIP_SECTION_BODY.test(currentSection)) {
+      continue
+    }
+
     const numbered = line.match(/^\s*(?:\d+[\).]|[-*]\s+\[[ xX]\]|[-*])\s+(.+)$/)
-    if (numbered?.[1] && numbered[1].trim().length > 3 && !isPlaceholderItem(numbered[1])) {
+    if (
+      numbered?.[1] &&
+      numbered[1].trim().length > 3 &&
+      !isPlaceholderItem(numbered[1]) &&
+      !isConstraintMetaItem(numbered[1])
+    ) {
       phases.push(numbered[1].trim())
     }
   }
 
   const unique = [...new Set(phases.map((p) => p.replace(/\s+/g, " ").trim()))].filter(
-    (p) => !TEMPLATE_SECTION_TITLES.test(p) && !isPlaceholderItem(p),
+    (p) => !TEMPLATE_SECTION_TITLES.test(p) && !isPlaceholderItem(p) && !isConstraintMetaItem(p),
   )
   if (unique.length >= 2) return unique.slice(0, 20)
   if (unique.length === 1) return unique

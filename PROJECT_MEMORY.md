@@ -30,6 +30,7 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - [x] UX polish: README 3 steps, idea template, start prompt, DoD/resume, doctor tips
 - [x] Post-review defect fixes (legacy memory migrate, plan-from paths, phases regex, adopt, dry-run)
 - [x] Consumer-run hardening (skip nested toolkit, keep Indice.md, skip empty idea template, console UTF-8)
+- [x] plan-from ignores Constraints/Notes body (only Must have / Nice to have / custom ##)
 - [ ] Public npm packaging (optional)
 
 ## Open items
@@ -37,10 +38,8 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - Public npm packaging (currently `private: true`)
 - Multi-agent file-locking runtime (still documentary)
 - e2e/coverage suites if those scripts are published in YAML
-- After copy to ComfyUI: restore Indice.md if renamed; refresh nested toolkit; edit idea.md then re-run setup-all
 
 ## Recent status
 
-ComfyUI setup-all log reviewed. Hardened toolkit: upgrade skips nested `Universal_Loop_Agent`,
-no longer renames product `Indice.md`, plan-from skips empty idea template, setup-all uses UTF-8.
-24 tests pass.
+plan-from no longer promotes Constraints/Notes bullets into phases. 25 tests pass.
+Copy updated toolkit into ComfyUI and re-run setup-all to refresh PROJECT_MEMORY phases.
