@@ -1,174 +1,234 @@
 # uagent
 
-**Loop agent + portable project memory.**  
-One setup → `AGENTS.md` (rules in chat) + `PROJECT_MEMORY.md` (handoff on disk). You give **one** instruction; the agent works **phase by phase** until the plan is done — without you saying “continue”.
+Universal agent config generator. Edit one YAML, generate `AGENTS.md` compatible with 28+ AI code editors.
 
-Works with Cursor, Copilot, Claude Code, OpenCode, Windsurf, and 20+ editors that read `AGENTS.md`.
+## What it does
 
----
+`uagent` takes a single `universal-agent.yaml` and generates an `AGENTS.md` file that works with OpenCode, Cursor, Copilot, Claude Code, Windsurf, Devin, Gemini CLI, and 20+ more editors.
 
-## Start in 3 steps
+## Quick start
 
-### 1. Put the toolkit in your project
-
-```
-your-project/
-├── (your code or empty folder)
-└── Universal_Loop_Agent/     ← this repo (subfolder)
-```
-
-Bun is required once. If it is missing, `setup-all` installs it automatically (Windows: official `bun.sh` installer). Manual: https://bun.sh
-
-### 2. Run setup (double-click)
-
-From `Universal_Loop_Agent/`:
+### Option 1: Using .bat files (Windows)
 
 ```bash
-setup-all.bat
+# Initialize (auto-detects project, creates universal-agent.yaml)
+init.bat
+
+# Generate AGENTS.md
+generate.bat
 ```
 
-(`setup-all.ps1` on PowerShell. Needs network the first time if Bun is not installed.)
-
-Creates/updates in the **parent** project: `idea.md`, `PROJECT_MEMORY.md`, `universal-agent.yaml`, `AGENTS.md`, adapters, `LOOP_START_PROMPT.txt`.
-
-Edit `idea.md` if the template is empty, then run `setup-all.bat` again.
-
-### 3. Open the project and start the loop
-
-1. Open the **parent** project in your AI editor  
-2. Load / attach **`AGENTS.md`**  
-3. Paste the prompt from **`LOOP_START_PROMPT.txt`** (or below)
-
-```
-Load AGENTS.md (loop mode). Read PROJECT_MEMORY.md and idea.md (or the plan). Implement the project phase by phase until all phases are done. For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase. Do not ask me to say continue between successful phases. Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop). If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.
-```
-
-That is the whole day-1 flow.
-
----
-
-## What you get
-
-| File | Role |
-|------|------|
-| **`AGENTS.md`** | Loop rules **in the chat** |
-| **`PROJECT_MEMORY.md`** | Durable phases / blockers — **travels with the repo** |
-| **`idea.md`** | Your idea/plan (template created if missing) |
-| **`LOOP_START_PROMPT.txt`** | Copy-paste start prompt |
-| **`universal-agent.yaml`** | Source config — edit, then re-run `setup-all.bat` |
-
-### Tool vs product
-
-| Product (commit these) | Toolkit (optional helper) |
-|------------------------|---------------------------|
-| `AGENTS.md`, `PROJECT_MEMORY.md`, `idea.md`, `universal-agent.yaml`, `.uagent/memory/` | `Universal_Loop_Agent/` + `setup-all.bat` |
-
-The app must **not** import the toolkit as application code.
-
-### Resume after a long chat
-
-New chat → load `AGENTS.md` → paste `LOOP_START_PROMPT.txt` (includes resume).  
-Disk memory is the source of truth; finished phases are not redone.
-
----
-
-## What setup-all runs
-
-1. Install toolkit deps if needed  
-2. `init` — detect stack (incl. light README/src scan)  
-3. `upgrade` — legacy renames/refs  
-4. `ensure-idea` — create `idea.md` template if missing  
-5. `plan-from` — phases into `PROJECT_MEMORY.md`  
-6. `generate --adapters` + `write-prompt`  
-7. `doctor` — score + fix tips  
-
----
-
-## Advanced (CLI)
-
-Use when you prefer Bun commands instead of `setup-all.bat`:
+### Option 2: Using CLI
 
 ```bash
-bun install
-bun run src/cli.ts init ..
-bun run src/cli.ts ensure-idea ..
-bun run src/cli.ts plan-from ../idea.md ..
-bun run src/cli.ts generate ../universal-agent.yaml -o .. --force --adapters
-bun run src/cli.ts write-prompt ..
-bun run src/cli.ts doctor ..
-bun run src/cli.ts validate ../universal-agent.yaml
-bun run src/cli.ts upgrade .. --yes --prune
-bun run src/cli.ts sync .. --force
-bun run src/cli.ts adopt ..
+# Install
+npm install -g uagent
+
+# Or with bun
+bun install -g uagent
+
+# Initialize
+uagent init
+
+# Edit universal-agent.yaml
+# Generate AGENTS.md
+uagent generate
 ```
 
-Package is `"private": true` — run from source / `setup-all`, not npm publish.
+## How it works
 
-### Configuration sketch
+```
+universal-agent.yaml → [uagent generate] → AGENTS.md
+```
+
+1. You edit `universal-agent.yaml` with your project info
+2. Run `uagent generate`
+3. Load `AGENTS.md` in your AI editor
+4. The editor picks it up automatically
+
+## Configuration
+
+Edit `universal-agent.yaml`:
 
 ```yaml
-# universal-agent.yaml (project root)
 project:
   name: "My Project"
   stack:
     languages: [typescript]
-    runtime: [bun]
+    runtime: [node 22]
+
+build:
+  install: "npm install"
+  dev: "npm run dev"
+  test: "npm test"
+
 agent_loop:
-  enabled: true
-  max_iterations: 30
-  doom_loop_detection: true
+  max_iterations: 15
+  rules:
+    - instruction: "Always read files before editing"
+    - instruction: "Run tests after every change"
+
 multi_agent:
   memory:
     enabled: true
-    canonical_file: "PROJECT_MEMORY.md"
+    path: ".uagent/memory/"
+  ownership:
+    - agent: "frontend"
+      globs: ["src/components/**"]
+    - agent: "backend"
+      globs: ["src/api/**"]
+      integrator: true
 ```
 
-### Extra portable features
+## Sections
 
-| Feature | Command |
-|---------|---------|
-| Multi-editor adapters | `generate --adapters` / `sync` |
-| Frontmatter on AGENTS.md | automatic |
-| Import CLAUDE.md / .cursorrules | `adopt` |
-| Phases from idea | `plan-from` / setup-all |
-| Readiness score | `doctor` |
-| Light deep detect | always on in `init`/`detect` (no heavy deps) |
+The generated `AGENTS.md` includes:
 
-Not in scope on purpose: AST/MCP scanners, vector DB memory, mission-control budgets.
+| Section | What it configures |
+|---------|-------------------|
+| Project Overview | Name, description, stack |
+| Build & Run | Install, dev, build, lint commands |
+| Testing | Unit, e2e, coverage commands |
+| Code Style | Indent, quotes, conventions |
+| Security | Security rules |
+| Git | Commit format, branch naming |
+| Agent Loop | Max iterations, timeout, loop rules |
+| Multi-Agent | Memory, ownership matrix, conflict prevention |
+| Project Rules | File-scoped instructions |
 
-### Upgrade only
+## Agent Loop
+
+The `agent_loop` section defines how your agent behaves in loop mode:
+
+```yaml
+agent_loop:
+  enabled: true
+  max_iterations: 15
+  timeout_seconds: 300
+  doom_loop_detection: true
+  rules:
+    - instruction: "Always read files before editing"
+    - instruction: "Run tests after every change"
+    - instruction: "If no progress in 3 iterations, stop and ask"
+```
+
+### Using the Agent Loop
+
+**Prompt mode (default)**: Work normally — no loop behavior activates.
+
+**Loop mode**: Load `AGENTS.md` in your agent to activate. The agent will follow the loop rules defined in your config.
+
+**How to activate per editor:**
+
+| Editor | How to activate |
+|--------|-----------------|
+| OpenCode | Auto-detected — just load the project |
+| Cursor | Auto-detected — AGENTS.md in project root |
+| GitHub Copilot | Auto-detected via `.github/copilot-instructions.md` referencing AGENTS.md |
+| Claude Code | Add to `CLAUDE.md`: `@AGENTS.md` |
+| Windsurf | Auto-detected |
+| Cline | Auto-detected |
+| Roo Code | Auto-detected |
+
+**What the loop does:**
+- Agent reads files before editing
+- Runs tests after changes
+- Stops if no progress in 3 iterations (doom loop detection)
+- Reports what was changed and why
+
+**To disable loop**: Delete or rename `AGENTS.md`, or set `agent_loop.enabled: false` in your YAML.
+
+## Multi-Agent
+
+The `multi_agent` section configures coordination between agents:
+
+```yaml
+multi_agent:
+  memory:
+    enabled: true
+    # Canonical portable handoff (repo root). Agents read/update this file.
+    canonical_file: "MEMORIA_PROYECTO.md"
+    # Stubs only — pointers to canonical_file (do not keep a second diary here)
+    path: ".uagent/memory/"
+    auto_sync: true
+  ownership:
+    - agent: "core"
+      globs: ["src/core/**"]
+    - agent: "api"
+      globs: ["src/api/**"]
+      integrator: true
+  conflict:
+    file_locking: true
+    strategy: topological
+```
+
+### Portable project memory
+
+| File | Role |
+|------|------|
+| **`MEMORIA_PROYECTO.md`** (repo root) | Canonical handoff — travels with the project |
+| **`AGENTS.md`** | Agent rules / loop only (generated from repo-root `universal-agent.yaml`) |
+| **`.uagent/memory/`** | Stubs pointing at `MEMORIA_PROYECTO.md` |
+
+`uagent init` creates `MEMORIA_PROYECTO.md` if missing (never overwrites) and writes stubs under `.uagent/memory/`.
+
+**Full docs/scripts sync (multi-agent):** the generated loop includes a rule to sync the **whole** documentation/scripts canon after each substantive delivery (not only files from the latest feature). Edit the rule in the project's `universal-agent.yaml`, then run `generate.bat` / `generate.ps1` from this folder so `AGENTS.md` stays portable across machines and AI editors.
+## Compatibility
+
+`AGENTS.md` is auto-detected by:
+
+| Editor | Auto-detected |
+|--------|:------------:|
+| OpenCode | ✅ |
+| Codex | ✅ |
+| GitHub Copilot | ✅ |
+| Cursor | ✅ |
+| Windsurf | ✅ |
+| Devin | ✅ |
+| Jules | ✅ |
+| Zed | ✅ |
+| Amp | ✅ |
+| Roo Code | ✅ |
+| Kilo Code | ✅ |
+| Cline | ✅ |
+| Claude Code | via `CLAUDE.md` → `@AGENTS.md` |
+| Gemini CLI | via config |
+
+## CLI commands
 
 ```bash
-bun run src/cli.ts upgrade .. --yes --prune
-# or just re-run setup-all.bat
+# Generate AGENTS.md
+uagent generate
+
+# Validate universal-agent.yaml
+uagent validate
+
+# Preview without writing
+uagent generate --dry-run
 ```
 
-Report: `.uagent/upgrade-report.json`.
-
-### Layout
+## Project structure
 
 ```
 your-project/
-├── idea.md
-├── LOOP_START_PROMPT.txt
-├── universal-agent.yaml
-├── PROJECT_MEMORY.md
-├── AGENTS.md
-├── .uagent/memory/
-└── Universal_Loop_Agent/
-    ├── setup-all.bat
-    ├── setup-all.ps1
-    └── templates/idea.md
+├── universal-agent.yaml    # Edit this
+├── AGENTS.md               # Generated (auto-detected by editors)
+└── .uagent/
+    └── memory/             # Local memory (not in git, moves with folder)
 ```
 
-### Portability
+## Migration
 
-Copy the project folder anywhere. No absolute machine paths. Re-run `setup-all.bat` after moving if you keep the toolkit nested (`bun install` inside it once).
+The project is fully portable. To move to another machine or path:
+
+1. Copy the entire project folder (USB, network, cloud, etc.)
+2. Reinstall dependencies: `bun install`
+3. Regenerate: `bun run src/cli.ts generate`
+
+All paths in `universal-agent.yaml` are relative — no absolute paths to fix.
+
+**Memory**: `.uagent/memory/` is not in git but moves with the folder. Each project has its own memory.
 
 ## License
 
-[MIT](./LICENSE) — Copyright (c) 2026 Jorge Octavio Gomez Gonzalez (Warcklian).
-
-You may use, modify, and redistribute this toolkit freely, including in commercial
-projects, provided you keep the copyright and permission notice. The software is
-provided as-is, without warranty.
+MIT

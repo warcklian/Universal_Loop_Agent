@@ -15,6 +15,8 @@ build:
 
 testing:
   unit: "bun test"
+  e2e: "bun test:e2e"
+  coverage: "bun test:coverage"
 
 code_style:
   indent: 2
@@ -42,28 +44,20 @@ git:
 
 agent_loop:
   enabled: true
-  max_iterations: 30
-  timeout_seconds: 600
+  max_iterations: 15
+  timeout_seconds: 300
   doom_loop_detection: true
   rules:
-    - instruction: "At session start: read PROJECT_MEMORY.md, then any plan/idea files. Chat text counts as instructions too."
-      description: "Portable memory + plan/idea are the source of truth"
-    - instruction: "Autonomous phased delivery: implement one phase fully, run tests, mark done in PROJECT_MEMORY.md, then immediately start the next phase — do not wait for the user to say continue."
-      description: "One user instruction should drive work as far as safely possible"
-    - instruction: "Only pause when blocked: missing secrets, irreversible destructive action, genuine product ambiguity, or doom-loop (no progress in 3 iterations)."
-      description: "Avoid stop-and-ask for routine next steps"
     - instruction: "Always read files before editing them"
-      description: "Never edit blind"
-    - instruction: "Run tests after every substantive change; do not mark a phase complete until checks pass"
-      description: "Verify before advancing"
-    - instruction: "Run linter and type checker after edits when defined"
+      description: "Never edit blind — understand the current state first"
+    - instruction: "Run tests after every change"
+      description: "Verify correctness immediately"
+    - instruction: "Run linter and type checker after edits"
       description: "Catch errors early"
-    - instruction: "Keep PROJECT_MEMORY.md updated as you go (current phase, done/pending, blockers)."
-      description: "Portable continuity"
-    - instruction: "When generating consumer configs, never couple the consumer product to this toolkit folder — consumer product owns PROJECT_MEMORY.md, AGENTS.md, universal-agent.yaml, .uagent/memory only."
-      description: "Tool vs product boundary for generated projects"
-    - instruction: "Explain what you changed and why at phase boundaries and at final completion"
-      description: "Clear progress reporting"
+    - instruction: "If no progress in 3 iterations, stop and ask the user"
+      description: "Prevent doom loops"
+    - instruction: "Explain what you changed and why"
+      description: "Always report back with a summary"
 
 multi_agent:
   enabled: true
@@ -71,25 +65,9 @@ multi_agent:
     enabled: true
     path: ".uagent/memory/"
     auto_sync: true
-    canonical_file: "PROJECT_MEMORY.md"
   ownership:
     - agent: "core"
-      globs:
-        - "src/schema.ts"
-        - "src/parser.ts"
-        - "src/generator.ts"
-        - "src/cli.ts"
-        - "src/detector.ts"
-        - "src/memory.ts"
-        - "src/yaml-generator.ts"
-        - "src/upgrade.ts"
-        - "src/loop-defaults.ts"
-        - "src/adapters.ts"
-        - "src/adopt.ts"
-        - "src/plan-from.ts"
-        - "src/doctor.ts"
-        - "src/idea-template.ts"
-        - "templates/**"
+      globs: ["src/schema.ts", "src/parser.ts", "src/generator.ts", "src/cli.ts"]
     - agent: "sections"
       globs: ["src/sections/**"]
       integrator: true
@@ -120,16 +98,9 @@ rules:
       Sections are joined with double newlines.
       Never modify the output format — consumers depend on it.
 
-  - name: "Loop defaults"
-    glob: "src/loop-defaults.ts"
-    instructions: |
-      Default consumer loop rules and activation copy.
-      Keep English-only product filenames.
-      Preserve autonomous phased delivery + tool-vs-product boundary.
-
 universal_instructions: |
-  This repository is the uagent toolkit (generator), not a sample app.
-  Load AGENTS.md to activate autonomous loop mode. PROJECT_MEMORY.md is portable handoff.
-  When init/generate targets another project, that project's product files must not depend on this toolkit folder.
-  Consumer products own: PROJECT_MEMORY.md, AGENTS.md, universal-agent.yaml, .uagent/memory/.
-  Work phase-by-phase until the assigned plan is done; do not wait for "continue" between successful phases.
+  Universal agent config generator — auto-adapts to any project stack.
+  Edit universal-agent.yaml to configure everything.
+  Run `uagent generate` to regenerate.
+  Load AGENTS.md in your agent to activate loop mode.
+  Work without the file for normal prompt mode.
