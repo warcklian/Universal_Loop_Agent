@@ -9,6 +9,11 @@ import { generate } from "./generator.ts"
 import { detectProject } from "./detector.ts"
 import { writeYaml } from "./yaml-generator.ts"
 import { initMemory, ensureMemory } from "./memory.ts"
+import { formatUpgradeSummary, runUpgrade } from "./upgrade.ts"
+import { ensureIdeaFile, writeStartPromptFile } from "./idea-template.ts"
+import { planFromIdea } from "./plan-from.ts"
+import { formatDoctorReport, runDoctor } from "./doctor.ts"
+import { syncAdapters } from "./adapters.ts"
 
 function askConfirmation(question: string): Promise<boolean> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -87,7 +92,8 @@ program
   .option("--dry-run", "Print without writing")
   .option("--init-memory", "Create .uagent/memory/ if missing")
   .option("--force", "Overwrite existing AGENTS.md without asking")
-  .action(async (source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean; force?: boolean }) => {
+  .option("--adapters", "Write editor adapter files that point at AGENTS.md")
+  .action(async (source: string, opts: { output: string; dryRun?: boolean; initMemory?: boolean; force?: boolean; adapters?: boolean }) => {
     try {
       const config = parseSource(source)
       const result = generate(config)
@@ -111,6 +117,12 @@ program
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
       writeFileSync(outPath, result.content, "utf-8")
       console.log(`Generated ${result.file} for: ${config.project.name}`)
+
+      if (opts.adapters) {
+        const synced = syncAdapters(resolve(opts.output), { force: Boolean(opts.force) })
+        for (const file of synced.written) console.log(`  Adapter: ${file}`)
+        for (const file of synced.skipped) console.log(`  Adapter skipped: ${file}`)
+      }
 
       if (opts.initMemory && config.multi_agent?.memory?.enabled) {
         const project = detectProject(resolve("."))
@@ -146,6 +158,67 @@ program
       }
       throw e
     }
+  })
+
+program
+  .command("upgrade")
+  .description("Migrate legacy memory and agent filenames")
+  .argument("[target]", "Target project directory", "..")
+  .option("--dry-run", "Report without writing")
+  .option("--yes", "Apply without an extra prompt")
+  .option("--prune", "Remove a legacy file when the new name already exists")
+  .action((target: string, opts: { dryRun?: boolean; yes?: boolean; prune?: boolean }) => {
+    const result = runUpgrade(resolve(target), {
+      dryRun: Boolean(opts.dryRun),
+      yes: Boolean(opts.yes),
+      prune: Boolean(opts.prune),
+    })
+    console.log(formatUpgradeSummary(result))
+    if (!result.report.verify.ok) process.exitCode = 1
+  })
+
+program
+  .command("ensure-idea")
+  .description("Create idea.md from the template when the project has none")
+  .argument("[target]", "Target project directory", "..")
+  .action((target: string) => {
+    const result = ensureIdeaFile(resolve(target))
+    console.log(`  ${result.message}`)
+  })
+
+program
+  .command("plan-from")
+  .description("Turn an idea or plan file into phases in the project memory")
+  .argument("<idea>", "Idea or plan file, relative to the target")
+  .argument("[target]", "Target project directory", "..")
+  .action((idea: string, target: string) => {
+    try {
+      const result = planFromIdea(resolve(target), idea)
+      console.log(`  ${result.message}`)
+      if (result.skipped) process.exitCode = 0
+    } catch (e) {
+      console.error(`  [WARN] ${(e as Error).message}`)
+      process.exitCode = 1
+    }
+  })
+
+program
+  .command("write-prompt")
+  .description("Write LOOP_START_PROMPT.txt")
+  .argument("[target]", "Target project directory", "..")
+  .action((target: string) => {
+    const out = writeStartPromptFile(resolve(target))
+    console.log(`  Wrote ${out}`)
+  })
+
+program
+  .command("doctor")
+  .description("Readiness check for the agent loop")
+  .argument("[target]", "Target project directory", "..")
+  .action((target: string) => {
+    const report = runDoctor(resolve(target))
+    console.log(formatDoctorReport(report))
+    if (report.score < report.max) process.exitCode = 1
   })
 
 program.parse()
