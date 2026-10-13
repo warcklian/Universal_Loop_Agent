@@ -53,11 +53,11 @@ describe("change control rules", () => {
 
   test("register seed documents states and the entry table", () => {
     const seed = createChangeControlSeed("PROJECT_MEMORY.md")
-    expect(seed).toContain("# Control de cambios (local)")
-    expect(seed).toContain("autorizado")
-    expect(seed).toContain("implementado")
-    expect(seed).toContain("verificado")
-    expect(seed).toContain("| ID | Fecha | Alcance | Estado | Archivos | Verificación |")
+    expect(seed).toContain("# Change control (local)")
+    expect(seed).toContain("authorized")
+    expect(seed).toContain("implemented")
+    expect(seed).toContain("verified")
+    expect(seed).toContain("| ID | Date | Scope | State | Files | Verification |")
     expect(seed).toContain(`${CHANGE_ID_PREFIX}-0001`)
     expect(seed).toContain("PROJECT_MEMORY.md")
   })

@@ -30,7 +30,7 @@ function createMemoriaProyectoSeed(project: DetectedProject): string {
     `| Related | Role |`,
     `|-------------|-----|`,
     `| \`AGENTS.md\` | Agent / loop rules; must read and update **this** file |`,
-    `| \`CONTROL_CAMBIOS.md\` | Local change control register (row before code, docs before implementing) |`,
+    `| \`CHANGE_CONTROL.md\` | Local change control register (row before code, docs before implementing) |`,
     `| \`.uagent/memory/\` | Stubs that point here (multi-agent / uagent) |`,
     "",
     `**Project:** ${project.name}`,

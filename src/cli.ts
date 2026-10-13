@@ -10,6 +10,7 @@ import { detectProject } from "./detector.ts"
 import { writeYaml } from "./yaml-generator.ts"
 import { initMemory, ensureMemory } from "./memory.ts"
 import { formatUpgradeSummary, runUpgrade } from "./upgrade.ts"
+import { applySelfUpdate, checkSelfUpdate, formatSelfUpdate } from "./self-update.ts"
 import { ensureIdeaFile, writeStartPromptFile } from "./idea-template.ts"
 import { planFromIdea } from "./plan-from.ts"
 import { formatDoctorReport, runDoctor } from "./doctor.ts"
@@ -68,7 +69,7 @@ program
     }
 
     console.log(`\n  Done! Next steps:`)
-    console.log(`  1. Edit PROJECT_MEMORY.md (canonical handoff), CONTROL_CAMBIOS.md (change register) and universal-agent.yaml if needed`)
+    console.log(`  1. Edit PROJECT_MEMORY.md (canonical handoff), CHANGE_CONTROL.md (change register) and universal-agent.yaml if needed`)
     console.log(`  2. Run: uagent generate`)
     console.log(`  3. Load AGENTS.md in your AI editor (loop rules; memory stays in PROJECT_MEMORY.md)\n`)
   })
@@ -176,6 +177,22 @@ program
     })
     console.log(formatUpgradeSummary(result))
     if (!result.report.verify.ok) process.exitCode = 1
+  })
+
+program
+  .command("update")
+  .description("Check origin for a newer version of this toolkit and fast-forward it")
+  .argument("[target]", "Toolkit directory (default: current folder)", ".")
+  .option("--dry-run", "Only report the status, do not update")
+  .option("--check", "Only report the status, do not update")
+  .action((target: string, opts: { dryRun?: boolean; check?: boolean }) => {
+    const root = resolve(target)
+    const checkOnly = Boolean(opts.dryRun || opts.check)
+    const result = checkOnly
+      ? { check: checkSelfUpdate(root), applied: false, message: checkSelfUpdate(root).message }
+      : applySelfUpdate(root)
+    process.stdout.write(formatSelfUpdate(result, root))
+    // Never fail the caller: an offline or non-git toolkit keeps its local version
   })
 
 program

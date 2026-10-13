@@ -6,7 +6,7 @@ Travels with the repository (any folder or drive). Does not replace the master p
 | Related | Role |
 |---------|------|
 | `AGENTS.md` | Agent / loop rules; must read and update **this** file |
-| `CONTROL_CAMBIOS.md` | Local change register — row before code, docs before implementing |
+| `CHANGE_CONTROL.md` | Local change register — row before code, docs before implementing |
 | `.uagent/memory/` | Stubs that point here (multi-agent / uagent) |
 | `Universal_Loop_Agent_Plan.md` | Master delivery plan |
 | `Index.md` | Repository navigation map |
@@ -32,7 +32,8 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - [x] Post-review defect fixes (legacy memory migrate, plan-from paths, phases regex, adopt, dry-run)
 - [x] Consumer-run hardening (skip nested toolkit, keep Indice.md, skip empty idea template, console UTF-8)
 - [x] plan-from ignores Constraints/Notes body (only Must have / Nice to have / custom ##)
-- [x] Local change control canon: CONTROL_CAMBIOS.md register + docs-before-code gate in every generated project
+- [x] Local change control canon: CHANGE_CONTROL.md register + docs-before-code gate in every generated project
+- [x] English-only filenames and instructions + toolkit self-update (uagent update, setup-all step 0b)
 - [ ] Public npm packaging (optional)
 
 ## Open items
@@ -43,5 +44,6 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 
 ## Recent status
 
-Change control is now canon: `uagent init` seeds `CONTROL_CAMBIOS.md` at the project root, `generate` renders a **Change Control** section (register before code, document in detail before implementing, close only when verified), and the loop rules, adapters, start prompt and doctor all reference it. Pre-existing defects fixed along the way: canonical memory was written as `MEMORIA_PROYECTO.md` while the rest expected `PROJECT_MEMORY.md`, `detector` always emitted `npm` commands and had no description/layout scan, and generated `AGENTS.md` lacked frontmatter. 33 tests pass, `tsc --noEmit` clean.
+Change control is now canon: `uagent init` seeds `CHANGE_CONTROL.md` at the project root, `generate` renders a **Change Control** section (register before code, document in detail before implementing, close only when verified), and the loop rules, adapters, start prompt and doctor all reference it. Pre-existing defects fixed along the way: canonical memory was written as `MEMORIA_PROYECTO.md` while the rest expected `PROJECT_MEMORY.md`, `detector` always emitted `npm` commands and had no description/layout scan, and generated `AGENTS.md` lacked frontmatter. 33 tests pass, `tsc --noEmit` clean.
+English-only canon: the change register was renamed `CONTROL_CAMBIOS.md` → `CHANGE_CONTROL.md` (with upgrade migrations for existing projects), register states and the seeded register text are English, and the toolkit now self-updates: `uagent update` runs `git fetch` + `merge --ff-only` only, wired into setup-all as step 0b. Offline, dirty, diverged or detached cases are reported and never forced. 40 tests pass.
 Copy updated toolkit into ComfyUI and re-run setup-all to refresh PROJECT_MEMORY phases.

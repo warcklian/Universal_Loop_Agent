@@ -38,6 +38,11 @@ if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
     Write-Host ""
 }
 
+Write-Host "  [0b/6] Update — checking for a newer toolkit version..." -ForegroundColor White
+Write-Host ""
+bun run src/cli.ts update .
+Write-Host ""
+
 if (-not (Test-Path "node_modules")) {
     Write-Host "  [0/6] Installing toolkit dependencies..." -ForegroundColor White
     bun install
@@ -119,7 +124,7 @@ Write-Host ""
 Write-Host "  Product files (PARENT folder):" -ForegroundColor White
 Write-Host "    AGENTS.md              load this in the AI chat"
 Write-Host "    PROJECT_MEMORY.md      portable memory / phases"
-Write-Host "    CONTROL_CAMBIOS.md     change register (row before code, docs before implementing)"
+Write-Host "    CHANGE_CONTROL.md     change register (row before code, docs before implementing)"
 Write-Host "    idea.md                edit your idea if needed"
 Write-Host "    LOOP_START_PROMPT.txt  copy-paste prompt"
 Write-Host "    universal-agent.yaml   config (re-run setup-all after edits)"
@@ -133,7 +138,7 @@ Write-Host "  ------------------------------------------------------------------
 if (Test-Path "..\LOOP_START_PROMPT.txt") {
     Get-Content "..\LOOP_START_PROMPT.txt" | ForEach-Object { Write-Host "  $_" }
 } else {
-    Write-Host "  Load AGENTS.md. Read PROJECT_MEMORY.md, CONTROL_CAMBIOS.md and idea.md. Implement phase by phase until done."
+    Write-Host "  Load AGENTS.md. Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md. Implement phase by phase until done."
 }
 Write-Host "  --------------------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""

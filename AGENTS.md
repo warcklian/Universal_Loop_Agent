@@ -56,17 +56,17 @@ Conventions:
 
 Local change control for every change. No code before a registered row and a documentation update.
 
-- **Register file:** `CONTROL_CAMBIOS.md` (project root, travels with the repo)
+- **Register file:** `CHANGE_CONTROL.md` (project root, travels with the repo)
 - **ID format:** `CH-0001`, `CH-0002`, … (sequential, never reused)
-- **States:** `autorizado` → `en curso` → `implementado` → `verificado`
+- **States:** `authorized` → `in progress` → `implemented` → `verified`
 
 ### Rules
 
-1. **Register before coding** — every authorized change starts as a row in `CONTROL_CAMBIOS.md` with ID, date, scope and status `autorizado`. No row, no code.
+1. **Register before coding** — every authorized change starts as a row in `CHANGE_CONTROL.md` with ID, date, scope and status `authorized`. No row, no code.
 2. **Document before implementing** — before writing code, update the documentation in detail so any agent with only the repository (no chat history) can develop it: what and why, files/modules affected, exact steps, acceptance criteria and how to verify.
 3. **Docs are the spec** — the documentation update is part of the change, not an afterthought. When behavior changes, the docs that describe it change in the same delivery.
-4. **Close only when verified** — set the row to `implementado` (then `verificado`) only after the code is in place, the tests/checks for that change pass, and the docs match the implemented behavior. Record the files touched and the verification used.
-5. **Local and portable** — `CONTROL_CAMBIOS.md` lives at project root and travels with the repo; it is the change history that complements `PROJECT_MEMORY.md` (phases/handoff) and `Index.md` (navigation).
+4. **Close only when verified** — set the row to `implemented` (then `verified`) only after the code is in place, the tests/checks for that change pass, and the docs match the implemented behavior. Record the files touched and the verification used.
+5. **Local and portable** — `CHANGE_CONTROL.md` lives at project root and travels with the repo; it is the change history that complements `PROJECT_MEMORY.md` (phases/handoff) and `Index.md` (navigation).
 
 ## Agent Loop
 
@@ -78,7 +78,7 @@ This section defines how the agent loop behaves. Load this file to activate loop
 
 ### Loop Rules
 
-- Change control gate: before implementing any authorized change, add a row to CONTROL_CAMBIOS.md (ID, date, scope, status autorizado) and update the documentation in detail so any agent can develop it from the repo alone. No row and no docs update, no code.
+- Change control gate: before implementing any authorized change, add a row to CHANGE_CONTROL.md (ID, date, scope, status authorized) and update the documentation in detail so any agent can develop it from the repo alone. No row and no docs update, no code.
 - Always read files before editing them
 - Run tests after every change
 - Run linter and type checker after edits
@@ -90,11 +90,11 @@ This section defines how the agent loop behaves. Load this file to activate loop
 - **Loop mode:** Load / attach this `AGENTS.md` in your AI editor or chat (Cursor, Claude Code, OpenCode, Copilot, Windsurf, etc.), then paste the start prompt (see below or `LOOP_START_PROMPT.txt`).
 - **Prompt mode:** Work without loading this file — no loop behavior activates.
 - **Memory duo:** `AGENTS.md` = loop rules in-chat; `PROJECT_MEMORY.md` = durable portable handoff on disk. Use both.
-- **Change control:** `CONTROL_CAMBIOS.md` = local register of every change (row before code, docs before implementation).
+- **Change control:** `CHANGE_CONTROL.md` = local register of every change (row before code, docs before implementation).
 
 ### Suggested start prompt (copy-paste)
 
-> Load AGENTS.md (loop mode). Read PROJECT_MEMORY.md, CONTROL_CAMBIOS.md and idea.md (or the plan). Implement the project phase by phase until all phases are done. For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase. Change control: before implementing an authorized change, add its row to CONTROL_CAMBIOS.md and update the documentation in detail. Do not ask me to say continue between successful phases. Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop). If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.
+> Load AGENTS.md (loop mode). Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md (or the plan). Implement the project phase by phase until all phases are done. For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase. Change control: before implementing an authorized change, add its row to CHANGE_CONTROL.md and update the documentation in detail. Do not ask me to say continue between successful phases. Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop). If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.
 
 ### Autonomous phased delivery
 

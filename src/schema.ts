@@ -103,7 +103,7 @@ export interface ScopedRule {
 /** Local change control: register every change, document it in detail, then implement. */
 export interface ChangeControlConfig {
   enabled?: boolean
-  /** Register file at project root. Default: CONTROL_CAMBIOS.md */
+  /** Register file at project root. Default: CHANGE_CONTROL.md */
   file?: string
   /** Sequential ID prefix for entries. Default: CH */
   id_prefix?: string

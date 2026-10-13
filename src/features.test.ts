@@ -303,7 +303,7 @@ describe("doctor + frontmatter", () => {
         "utf-8",
       )
       writeFileSync(join(root, "PROJECT_MEMORY.md"), "# Mem\n\n## Phases\n\n- [ ] A\n", "utf-8")
-      writeFileSync(join(root, "CONTROL_CAMBIOS.md"), "# Register\n\n| ID | Fecha | Alcance |\n", "utf-8")
+      writeFileSync(join(root, "CHANGE_CONTROL.md"), "# Register\n\n| ID | Fecha | Alcance |\n", "utf-8")
       writeFileSync(join(root, "idea.md"), "# Idea\n\n## Goal\n\nBuild it\n", "utf-8")
       syncAdapters(root, { force: true })
       const report = runDoctor(root)

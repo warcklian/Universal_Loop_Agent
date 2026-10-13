@@ -57,6 +57,20 @@ export const MIGRATIONS: Migration[] = [
     description: "String references to legacy canonical memory",
   },
   {
+    id: "change-control-en",
+    kind: "file_rename",
+    from: "CONTROL_CAMBIOS.md",
+    to: "CHANGE_CONTROL.md",
+    description: "Change register filename (Spanish → English)",
+  },
+  {
+    id: "token-change-control",
+    kind: "token",
+    from: "CONTROL_CAMBIOS.md",
+    to: "CHANGE_CONTROL.md",
+    description: "String references to the legacy change register",
+  },
+  {
     id: "token-agents-loop",
     kind: "token",
     from: "AGENTS_LOOP.md",

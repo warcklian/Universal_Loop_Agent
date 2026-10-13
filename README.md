@@ -164,7 +164,7 @@ multi_agent:
 
 change_control:
   enabled: true
-  file: "CONTROL_CAMBIOS.md"
+  file: "CHANGE_CONTROL.md"
   id_prefix: "CH"
 ```
 
@@ -173,11 +173,11 @@ change_control:
 | File | Role |
 |------|------|
 | **`PROJECT_MEMORY.md`** (repo root) | Canonical handoff — travels with the project |
-| **`CONTROL_CAMBIOS.md`** (repo root) | Local change register — row before code, docs before implementing |
+| **`CHANGE_CONTROL.md`** (repo root) | Local change register — row before code, docs before implementing |
 | **`AGENTS.md`** | Agent rules / loop only (generated from repo-root `universal-agent.yaml`) |
 | **`.uagent/memory/`** | Stubs pointing at `PROJECT_MEMORY.md` |
 
-`uagent init` creates `PROJECT_MEMORY.md` and `CONTROL_CAMBIOS.md` if missing (never overwrites) and writes stubs under `.uagent/memory/`.
+`uagent init` creates `PROJECT_MEMORY.md` and `CHANGE_CONTROL.md` if missing (never overwrites) and writes stubs under `.uagent/memory/`.
 
 ## Change Control (local)
 
@@ -185,25 +185,13 @@ Every project gets a local change register at its root. The generated loop turns
 
 | Step | Rule |
 |------|------|
-| **1. Register** | Every authorized change starts as a row in `CONTROL_CAMBIOS.md` (ID `CH-0001`…, date, scope, status `autorizado`). No row, no code. |
+| **1. Register** | Every authorized change starts as a row in `CHANGE_CONTROL.md` (ID `CH-0001`…, date, scope, status `authorized`). No row, no code. |
 | **2. Document** | Before implementing, the docs are updated **in detail** so any agent with only the repository can develop it: what and why, files affected, exact steps, acceptance criteria, how to verify. |
-| **3. Close** | The row moves to `implementado` → `verificado` only when code, checks and docs agree; files touched and verification evidence are recorded. |
+| **3. Close** | The row moves to `implemented` → `verified` only when code, checks and docs agree; files touched and verification evidence are recorded. |
 
 The register is created by `uagent init` (never overwritten), checked by `uagent doctor`, and referenced from the generated `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` and `LOOP_START_PROMPT.txt`. Rename it with `change_control.file`; disable it with `change_control.enabled: false`.
 
 **Full docs/scripts sync (multi-agent):** the generated loop includes a rule to sync the **whole** documentation/scripts canon after each substantive delivery (not only files from the latest feature). Edit the rule in the project's `universal-agent.yaml`, then run `generate.bat` / `generate.ps1` from this folder so `AGENTS.md` stays portable across machines and AI editors.
-
-## Project structure
-
-```
-your-project/
-├── universal-agent.yaml    # Edit this
-├── AGENTS.md               # Generated (auto-detected by editors)
-├── PROJECT_MEMORY.md       # Canonical portable handoff
-├── CONTROL_CAMBIOS.md      # Local change register
-└── .uagent/
-    └── memory/             # Local memory stubs (not in git, moves with folder)
-```
 
 ## Compatibility
 
@@ -235,9 +223,28 @@ uagent generate
 # Validate universal-agent.yaml
 uagent validate
 
+# Check origin for a newer version of the toolkit (and update it)
+uagent update
+uagent update --check      # report only, never writes
+
 # Preview without writing
 uagent generate --dry-run
 ```
+
+## Toolkit self-update
+
+The toolkit folder is a git clone, so it can tell when the remote is ahead. `setup-all.bat` / `setup-all.ps1` run this check as step **0b** before anything else, and you can also run it any time with `uagent update`.
+
+| Situation | What happens |
+|-----------|--------------|
+| Remote ahead | `git fetch` + `git merge --ff-only` — the toolkit jumps to the latest commit |
+| Already up to date | Nothing, reports `up-to-date` |
+| Local commits not pushed | Reports `ahead`, does not touch history |
+| Uncommitted changes | Reports `dirty` and stops — you commit or stash first |
+| Diverged / detached HEAD | Reports it and stops — history is never rewritten |
+| Offline, no remote, or no git | Reports why and keeps the local version |
+
+The update is **fast-forward only**: it never resets, never force-pushes and never discards your work. Only the toolkit folder is updated — your project files are untouched.
 
 ## Project structure
 
@@ -245,8 +252,10 @@ uagent generate --dry-run
 your-project/
 ├── universal-agent.yaml    # Edit this
 ├── AGENTS.md               # Generated (auto-detected by editors)
+├── PROJECT_MEMORY.md       # Canonical portable handoff
+├── CHANGE_CONTROL.md       # Local change register
 └── .uagent/
-    └── memory/             # Local memory (not in git, moves with folder)
+    └── memory/             # Local memory stubs (not in git, moves with folder)
 ```
 
 ## Migration

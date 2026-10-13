@@ -7,7 +7,7 @@
 | **Master plan** | `Universal_Loop_Agent_Plan.md` |
 | **Agent contract** | `universal-agent.yaml` → `AGENTS.md` |
 | **Canonical memory** | `PROJECT_MEMORY.md` |
-| **Change control** | `CONTROL_CAMBIOS.md` (register + docs before code) |
+| **Change control** | `CHANGE_CONTROL.md` (register + docs before code) |
 | **License** | MIT (`LICENSE`) |
 
 ## Repository tree
@@ -18,7 +18,7 @@ Universal_Loop_Agent/
 ├── Universal_Loop_Agent_Plan.md — master plan (delivery log)
 ├── Index.md — this navigation map
 ├── PROJECT_MEMORY.md — canonical session handoff
-├── CONTROL_CAMBIOS.md — local change register (canon)
+├── CHANGE_CONTROL.md — local change register (canon)
 ├── .cursorrules — local Cursor operating contract
 ├── README.md — quick start, CLI, portable memory, upgrade
 ├── package.json — uagent bin, license MIT, bun scripts (dev/build/test/lint/typecheck)
@@ -32,15 +32,17 @@ Universal_Loop_Agent/
 ├── templates/
 │   └── idea.md — portable idea/plan template copied by ensure-idea
 └── src/
-    ├── cli.ts — init / detect / generate / validate / upgrade / sync / adopt / plan-from / doctor / ensure-idea / write-prompt
+    ├── cli.ts — init / detect / generate / validate / upgrade / update / adopt / plan-from / doctor / ensure-idea / write-prompt
     ├── schema.ts — SourceConfig types (single source of truth)
     ├── parser.ts — read and validate YAML → SourceConfig
     ├── generator.ts — orchestrate sections → AGENTS.md (+ frontmatter)
     ├── detector.ts — stack + light deep scan (README, src layout, scripts)
     ├── detector.test.ts — detector / parse / generateYaml / light-deep tests
     ├── memory.ts — PROJECT_MEMORY.md + .uagent/memory stubs + legacy migration
-    ├── change-control.ts — CONTROL_CAMBIOS.md canon: rules, seed, ensure
+    ├── change-control.ts — CHANGE_CONTROL.md canon: rules, seed, ensure
     ├── change-control.test.ts — change control canon coverage
+    ├── self-update.ts - check origin for a newer toolkit version (fast-forward only)
+    ├── self-update.test.ts - update status / safe fast-forward tests
     ├── yaml-generator.ts — write universal-agent.yaml from DetectedProject
     ├── loop-defaults.ts — default autonomous loop rules + activation copy
     ├── loop-defaults.test.ts — loop defaults coverage
@@ -66,7 +68,8 @@ Universal_Loop_Agent/
 | Init / detection | `src/detector.ts` → `src/yaml-generator.ts` + `src/memory.ts` |
 | Loop defaults | `src/loop-defaults.ts` |
 | Idea + start prompt | `src/idea-template.ts` + `templates/idea.md` |
-| Change control | `src/change-control.ts` → `CONTROL_CAMBIOS.md` + Change Control section in `AGENTS.md` |
+| Change control | `src/change-control.ts` → `CHANGE_CONTROL.md` + Change Control section in `AGENTS.md` |
+| Self-update | src/self-update.ts → uagent update (also runs as setup-all step 0b) |
 | Adapters / adopt / plan-from / doctor | `src/adapters.ts`, `src/adopt.ts`, `src/plan-from.ts`, `src/doctor.ts` |
 | Legacy upgrade | `src/upgrade.ts` |
 | Tests | `bun test` |
@@ -74,7 +77,7 @@ Universal_Loop_Agent/
 ## Last review
 
 - **Date:** 2026-10-13
-- **Scope:** Local change control canon (`CONTROL_CAMBIOS.md` + docs-before-code gate), canonical filename fix (`PROJECT_MEMORY.md`), detector build commands/description/layout, AGENTS.md frontmatter
+- **Scope:** English-only product filenames (CHANGE_CONTROL.md) and instructions; self-update check with safe fast-forward (uagent update, setup-all step 0b); local change control canon with docs-before-code gate; canonical memory filename fix (PROJECT_MEMORY.md); detector build commands/description/layout; AGENTS.md frontmatter
 
 ## Pending deeper review
 

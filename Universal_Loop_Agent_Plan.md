@@ -1,22 +1,40 @@
 # Universal_Loop_Agent — Master plan
 
-## Registro — 2026-10-13 (Local change control + docs gate)
+## Record — 2026-10-13 (Local change control + docs gate)
 
 | Field | Value |
 |-------|--------|
-| **Topic** | Control de cambios local y documentacion obligatoria antes de implementar |
-| **Goal** | Que cada proyecto generado registre el cambio y documente en detalle **antes** de programar |
+| **Topic** | Local change control + mandatory documentation before implementing |
+| **Goal** | Every generated project registers the change and documents it in detail **before** coding |
 | **Status** | Completed |
 
-### Entregado
-
-- `CONTROL_CAMBIOS.md` como registro canonico en la raiz del proyecto (se crea en `init`, nunca se pisa)
-- Seccion **Change Control (local)** en el `AGENTS.md` generado: registrar antes de codear, documentar en detalle antes de implementar, cerrar solo verificado
-- Regla de gate en `agent_loop` + linea en `CLAUDE.md`, `copilot-instructions`, `.cursorrules` y `LOOP_START_PROMPT.txt`
-- `doctor` puntua la presencia del registro (`change_control`)
-- Config `change_control.enabled / file / id_prefix / rules` parseada y sembrada por `yaml-generator`
-- Defectos preexistentes corregidos: memoria canonica (`PROJECT_MEMORY.md`), comandos del detector segun lockfile, descripcion/layout, frontmatter de `AGENTS.md`
+### Delivered
+- `CHANGE_CONTROL.md` as the canonical register at the project root (created by `init`, never overwritten)
+- **Change Control (local)** section in the generated `AGENTS.md`: register before coding, document in detail before implementing, close only once verified
+- Gate rule in `agent_loop` + line in `CLAUDE.md`, `copilot-instructions`, `.cursorrules` and `LOOP_START_PROMPT.txt`
+- `doctor` scores the presence of the register (`change_control`)
+- Config `change_control.enabled / file / id_prefix / rules` parsed and seeded by `yaml-generator`
+- Pre-existing defects fixed: canonical memory (`PROJECT_MEMORY.md`), detector commands based on lockfile, description/layout, `AGENTS.md` frontmatter
+- 40 tests in green, `tsc --noEmit` clean
 - 33 tests en verde, `tsc --noEmit` limpio
+
+## Record — 2026-10-13 (English-only canon + toolkit self-update)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | English filenames/instructions for agent compatibility + automatic version check |
+| **Goal** | One language for every generated file; the toolkit self-updates when the remote is ahead |
+| **Status** | Completed |
+
+### Delivered
+
+- `CONTROL_CAMBIOS.md` renamed to `CHANGE_CONTROL.md`, with upgrade migrations for existing projects
+- Register states now English (`authorized` / `in progress` / `implemented` / `verified`)
+- New `self-update.ts` + `uagent update`: `git fetch` then `merge --ff-only` only, never rewrites history
+- setup-all runs the update check as step 0b; offline / dirty / diverged / detached cases are reported, never forced
+- 40 tests in green, `tsc --noEmit` clean
+
+---
 
 ---
 

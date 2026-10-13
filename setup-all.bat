@@ -38,6 +38,11 @@ if %errorlevel% neq 0 (
     echo.
 )
 
+echo  [0b/6] Update - checking for a newer toolkit version...
+echo.
+call bun run src/cli.ts update .
+echo.
+
 if not exist "node_modules" (
     echo  [0/6] Installing toolkit dependencies...
     call bun install
@@ -123,7 +128,7 @@ echo.
 echo  Product files ^(PARENT folder^):
 echo    AGENTS.md              load this in the AI chat
 echo    PROJECT_MEMORY.md      portable memory / phases
-echo    CONTROL_CAMBIOS.md     change register ^(row before code, docs before implementing^)
+echo    CHANGE_CONTROL.md     change register ^(row before code, docs before implementing^)
 echo    idea.md                edit your idea if needed
 echo    LOOP_START_PROMPT.txt  copy-paste prompt
 echo    universal-agent.yaml   config ^(re-run setup-all after edits^)
@@ -136,7 +141,7 @@ echo.
 echo  --------------------------------------------------------------------------
 type ..\LOOP_START_PROMPT.txt 2>nul
 if errorlevel 1 (
-  echo  Load AGENTS.md. Read PROJECT_MEMORY.md, CONTROL_CAMBIOS.md and idea.md. Implement phase by phase until done. Do not ask to continue between phases.
+  echo  Load AGENTS.md. Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md. Implement phase by phase until done. Do not ask to continue between phases.
 )
 echo  --------------------------------------------------------------------------
 echo.

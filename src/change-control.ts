@@ -8,13 +8,13 @@ import { join, resolve } from "node:path"
  */
 
 /** Register file for local change control. Lives at project root and travels with the repo. */
-export const CHANGE_CONTROL_FILE = "CONTROL_CAMBIOS.md"
+export const CHANGE_CONTROL_FILE = "CHANGE_CONTROL.md"
 
 /** Sequential ID prefix for change entries — CH-0001, CH-0002, … */
 export const CHANGE_ID_PREFIX = "CH"
 
 /** Ordered states used in the register. */
-export const CHANGE_STATES = ["autorizado", "en curso", "implementado", "verificado"] as const
+export const CHANGE_STATES = ["authorized", "in progress", "implemented", "verified"] as const
 
 /**
  * Canon rules rendered into the generated AGENTS.md (Change Control section)
@@ -22,10 +22,10 @@ export const CHANGE_STATES = ["autorizado", "en curso", "implementado", "verific
  */
 export function changeControlRules(canonicalMemory = "PROJECT_MEMORY.md"): string[] {
   return [
-    `**Register before coding** — every authorized change starts as a row in \`${CHANGE_CONTROL_FILE}\` with ID, date, scope and status \`autorizado\`. No row, no code.`,
+    `**Register before coding** — every authorized change starts as a row in \`${CHANGE_CONTROL_FILE}\` with ID, date, scope and status \`authorized\`. No row, no code.`,
     "**Document before implementing** — before writing code, update the documentation in detail so any agent with only the repository (no chat history) can develop it: what and why, files/modules affected, exact steps, acceptance criteria and how to verify.",
     "**Docs are the spec** — the documentation update is part of the change, not an afterthought. When behavior changes, the docs that describe it change in the same delivery.",
-    "**Close only when verified** — set the row to `implementado` (then `verificado`) only after the code is in place, the tests/checks for that change pass, and the docs match the implemented behavior. Record the files touched and the verification used.",
+    "**Close only when verified** — set the row to `implemented` (then `verified`) only after the code is in place, the tests/checks for that change pass, and the docs match the implemented behavior. Record the files touched and the verification used.",
     `**Local and portable** — \`${CHANGE_CONTROL_FILE}\` lives at project root and travels with the repo; it is the change history that complements \`${canonicalMemory}\` (phases/handoff) and \`Index.md\` (navigation).`,
   ]
 }
@@ -33,34 +33,34 @@ export function changeControlRules(canonicalMemory = "PROJECT_MEMORY.md"): strin
 /** Body seeded into the project-root register when the project has none. */
 export function createChangeControlSeed(canonicalMemory: string): string {
   return [
-    "# Control de cambios (local)",
+    "# Change control (local)",
     "",
-    "Registro local de cambios del proyecto. Vive en la raíz y viaja con el repositorio.",
-    `Complementa \`${canonicalMemory}\` (fases / handoff) e \`Index.md\` (navegación):`,
-    "aquí se anota qué cambió, por qué y cómo se verificó.",
+    "Local register of project changes. Lives at the project root and travels with the repository.",
+    `It complements \`${canonicalMemory}\` (phases / handoff) and \`Index.md\` (navigation):`,
+    "here you record what changed, why, and how it was verified.",
     "",
-    "**Regla canon** (ver `AGENTS.md` → *Change Control*): ningún cambio de código sin una fila",
-    "aquí, y la documentación se actualiza **antes** de implementar.",
+    "**Canon rule** (see `AGENTS.md` → *Change Control*): no code change without a row here,",
+    "and the documentation is updated **before** implementing.",
     "",
-    "## Cómo usarlo",
+    "## How to use it",
     "",
-    "1. **Antes de programar** — agrega una fila con estado `autorizado`.",
-    "2. **Antes de implementar** — actualiza la documentación en detalle: qué y por qué, archivos",
-    "   afectados, pasos, criterios de aceptación y cómo verificar. Debe bastar para que cualquier",
-    "   agente lo desarrolle solo con el repositorio.",
-    "3. **Al terminar** — marca `implementado` → `verificado` y anota archivos y verificación.",
+    "1. **Before coding** — add a row with status `authorized`.",
+    "2. **Before implementing** — update the documentation in detail: what and why, files",
+    "   affected, steps, acceptance criteria, and how to verify. It must be enough for any",
+    "   agent to develop it from the repository alone.",
+    "3. **When done** — mark `implemented` → `verified` and record files and verification.",
     "",
-    "## Estados",
+    "## States",
     "",
-    "`autorizado` → `en curso` → `implementado` → `verificado` (`bloqueado` si hay impedimento).",
+    "`authorized` → `in progress` → `implemented` → `verified` (`blocked` if there is an impediment).",
     "",
-    "## Registro",
+    "## Register",
     "",
-    "| ID | Fecha | Alcance | Estado | Archivos | Verificación |",
-    "|----|-------|---------|--------|----------|--------------|",
-    "| CH-0001 | _AAAA-MM-DD_ | _Qué se autorizó_ | autorizado | _rutas_ | _comandos / checks_ |",
+    "| ID | Date | Scope | State | Files | Verification |",
+    "|----|------|-------|-------|-------|--------------|",
+    "| CH-0001 | _YYYY-MM-DD_ | _What was authorized_ | authorized | _paths_ | _commands / checks_ |",
     "",
-    "_El ID es secuencial y nunca se reutiliza._",
+    "_The ID is sequential and never reused._",
     "",
   ].join("\n")
 }

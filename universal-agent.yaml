@@ -48,7 +48,7 @@ agent_loop:
   timeout_seconds: 300
   doom_loop_detection: true
   rules:
-    - instruction: "Change control gate: before implementing any authorized change, add a row to CONTROL_CAMBIOS.md (ID, date, scope, status autorizado) and update the documentation in detail so any agent can develop it from the repo alone. No row and no docs update, no code."
+    - instruction: "Change control gate: before implementing any authorized change, add a row to CHANGE_CONTROL.md (ID, date, scope, status authorized) and update the documentation in detail so any agent can develop it from the repo alone. No row and no docs update, no code."
       description: "Register and docs precede implementation"
     - instruction: "Always read files before editing them"
       description: "Never edit blind — understand the current state first"
@@ -81,7 +81,7 @@ multi_agent:
 
 change_control:
   enabled: true
-  file: "CONTROL_CAMBIOS.md"
+  file: "CHANGE_CONTROL.md"
   id_prefix: "CH"
 
 rules:

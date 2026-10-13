@@ -20,7 +20,7 @@ export function defaultConsumerLoopRules(): AgentLoopRule[] {
     },
     {
       instruction:
-        `Change control gate: before implementing any authorized change, first (1) add a row to \`${CHANGE_CONTROL_FILE}\` (ID, date, scope, status \`autorizado\`) and (2) update the documentation in detail — what and why, files affected, steps, acceptance criteria, how to verify — so any agent with only the repository can develop it. No row and no docs update, no code.`,
+        `Change control gate: before implementing any authorized change, first (1) add a row to \`${CHANGE_CONTROL_FILE}\` (ID, date, scope, status \`authorized\`) and (2) update the documentation in detail — what and why, files affected, steps, acceptance criteria, how to verify — so any agent with only the repository can develop it. No row and no docs update, no code.`,
       description: "Register and documentation precede implementation; the repo is the only handoff",
     },
     {
@@ -62,7 +62,7 @@ export function defaultConsumerLoopRules(): AgentLoopRule[] {
     },
     {
       instruction:
-        `After every substantive delivery, close the row in \`${CHANGE_CONTROL_FILE}\` (\`implementado\` → \`verificado\`, with files touched and verification) and sync the project docs that the product owns (PROJECT_MEMORY.md, Index.md, plan, README) for structure/behavior changes — not the toolkit folder.`,
+        `After every substantive delivery, close the row in \`${CHANGE_CONTROL_FILE}\` (\`implemented\` → \`verified\`, with files touched and verification) and sync the project docs that the product owns (PROJECT_MEMORY.md, Index.md, plan, README) for structure/behavior changes — not the toolkit folder.`,
       description: "Documentation and register stay with the product, in the same delivery",
     },
     {
