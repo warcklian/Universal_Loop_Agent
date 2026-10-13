@@ -2,6 +2,9 @@
 
 Describe what you want to build. The agent will turn this into phases in `PROJECT_MEMORY.md` and implement them autonomously when you load `AGENTS.md`.
 
+Before implementing, the agent registers the change in `CONTROL_CAMBIOS.md` (ID, date, scope, status `autorizado`)
+and updates the documentation in detail, so the work can be developed from the repository alone.
+
 ## Goal
 
 _One or two sentences: what success looks like._

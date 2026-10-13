@@ -76,9 +76,10 @@ export function ensureIdeaFile(targetDir: string): EnsureIdeaResult {
 export function loopStartPrompt(): string {
   return [
     "Load AGENTS.md (loop mode).",
-    "Read PROJECT_MEMORY.md and idea.md (or the plan).",
+    "Read PROJECT_MEMORY.md, CONTROL_CAMBIOS.md and idea.md (or the plan).",
     "Implement the project phase by phase until all phases are done.",
     "For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase.",
+    "Change control: before implementing an authorized change, add its row to CONTROL_CAMBIOS.md and update the documentation in detail.",
     "Do not ask me to say continue between successful phases.",
     "Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop).",
     "If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.",
@@ -92,6 +93,11 @@ export function writeStartPromptFile(targetDir: string): string {
     "# Copy everything below into your AI chat after loading AGENTS.md",
     "",
     loopStartPrompt(),
+    "",
+    "# Reminder — local change control:",
+    "#   1. Register the change in CONTROL_CAMBIOS.md (ID, date, scope, status autorizado).",
+    "#   2. Update the documentation in detail (what, why, files, steps, acceptance criteria, how to verify).",
+    "#   3. Then implement; close the row (implementado → verificado) when checks pass.",
     "",
   ].join("\n")
   writeFileSync(out, body, "utf-8")

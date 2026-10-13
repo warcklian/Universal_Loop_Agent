@@ -12,6 +12,7 @@ import type {
   GitConfig,
   AgentLoopConfig,
   MultiAgentConfig,
+  ChangeControlConfig,
   ScopedRule,
 } from "./schema.ts"
 
@@ -176,6 +177,16 @@ function validateMultiAgent(raw: Record<string, unknown> | undefined): MultiAgen
   return { enabled: bool(raw["enabled"]), memory, ownership, conflict }
 }
 
+function validateChangeControl(raw: Record<string, unknown> | undefined): ChangeControlConfig | undefined {
+  if (!raw) return undefined
+  return {
+    enabled: bool(raw["enabled"]),
+    file: str(raw["file"]),
+    id_prefix: str(raw["id_prefix"]),
+    rules: arr(raw["rules"]),
+  }
+}
+
 function validateRules(raw: unknown[] | undefined): ScopedRule[] | undefined {
   if (!raw || !Array.isArray(raw)) return undefined
   return raw.map((r) => {
@@ -221,6 +232,7 @@ export function parseSource(filePath: string): SourceConfig {
     git: validateGit(obj(doc["git"])),
     agent_loop: validateAgentLoop(obj(doc["agent_loop"])),
     multi_agent: validateMultiAgent(obj(doc["multi_agent"])),
+    change_control: validateChangeControl(obj(doc["change_control"])),
     rules: validateRules(doc["rules"] as unknown[] | undefined),
     universal_instructions: str(doc["universal_instructions"]),
   }

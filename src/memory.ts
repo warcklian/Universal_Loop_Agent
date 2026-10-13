@@ -1,9 +1,13 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs"
+import { writeFileSync, mkdirSync, existsSync, readFileSync, renameSync } from "node:fs"
 import { join } from "node:path"
 import type { DetectedProject } from "./detector.ts"
+import { ensureChangeControlRegister } from "./change-control.ts"
 
 /** Canonical portable handoff at project root (survives folder/machine moves). */
-export const CANONICAL_MEMORY_FILE = "MEMORIA_PROYECTO.md"
+export const CANONICAL_MEMORY_FILE = "PROJECT_MEMORY.md"
+
+/** Legacy Spanish name — migrated to CANONICAL_MEMORY_FILE on init/upgrade. */
+export const LEGACY_CANONICAL_MEMORY_FILE = "MEMORIA_PROYECTO.md"
 
 export interface MemoryFile {
   path: string
@@ -18,35 +22,36 @@ function createMemoriaProyectoSeed(project: DetectedProject): string {
   if (project.databases.length) stackBits.push(`Databases: ${project.databases.join(", ")}`)
 
   return [
-    "# Memoria del proyecto (canónica)",
+    "# Project memory (canonical)",
     "",
-    "**Fuente única** de handoff entre sesiones, equipos e IAs. Viaja con el repositorio",
-    "(cualquier carpeta o unidad). No sustituye el plan maestro ni la documentación operativa.",
+    "**Single source of truth** for handoff across sessions, teams, and AI agents.",
+    "Travels with the repository (any folder or drive). Does not replace the master plan or ops docs.",
     "",
-    `| Relacionado | Rol |`,
+    `| Related | Role |`,
     `|-------------|-----|`,
-    `| \`AGENTS.md\` | Reglas del agente / loop; debe leer y actualizar **este** archivo |`,
-    `| \`.uagent/memory/\` | Stubs que apuntan aquí (multi-agente / uagent) |`,
+    `| \`AGENTS.md\` | Agent / loop rules; must read and update **this** file |`,
+    `| \`CONTROL_CAMBIOS.md\` | Local change control register (row before code, docs before implementing) |`,
+    `| \`.uagent/memory/\` | Stubs that point here (multi-agent / uagent) |`,
     "",
-    `**Proyecto:** ${project.name}`,
+    `**Project:** ${project.name}`,
     "",
-    stackBits.length ? `**Stack detectado:** ${stackBits.join(" · ")}` : "",
+    stackBits.length ? `**Stack detected:** ${stackBits.join(" · ")}` : "",
     "",
-    `**Última actualización:** ${new Date().toISOString().slice(0, 10)} (init uagent)`,
+    `**Last updated:** ${new Date().toISOString().slice(0, 10)} (init uagent)`,
     "",
     "---",
     "",
-    "## Pendientes",
+    "## Open items",
     "",
-    "_Listar aquí lo abierto para la siguiente sesión._",
+    "_List what is open for the next session._",
     "",
-    "## Estado reciente",
+    "## Recent status",
     "",
-    "_Tras cada entrega sustantiva: 1 párrafo + archivos clave tocados._",
+    "_After each substantive delivery: 1 paragraph + key files touched._",
     "",
-    "### Cómo actualizar",
+    "### How to update",
     "",
-    "Fecha, pendientes si cambian, resumen breve. No duplicar runbooks ni el changelog del plan.",
+    "Date, open items if they change, brief summary. Do not duplicate runbooks or the change register.",
     "",
   ]
     .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
@@ -57,12 +62,12 @@ function stubContext(): string {
   return [
     "# Project Context (stub)",
     "",
-    "La memoria canónica del proyecto está en la **raíz del repositorio**:",
+    "The canonical project memory lives at the **repository root**:",
     "",
     `**[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})**`,
     "",
-    "No escriba el handoff aquí. Actualice siempre ese archivo.",
-    "Esta carpeta `.uagent/memory/` existe para el loop multi-agente (uagent); los archivos son punteros.",
+    "Do not write the handoff here. Always update that file.",
+    "This `.uagent/memory/` folder exists for the multi-agent loop (uagent); its files are pointers only.",
     "",
   ].join("\n")
 }
@@ -71,10 +76,10 @@ function stubDecisions(): string {
   return [
     "# Decisions Log (stub)",
     "",
-    `Decisiones de producto/arquitectura: plan maestro del proyecto y, si aplica, notas en`,
+    `Product/architecture decisions: the project master plan and, if applicable, notes in`,
     `**[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})**.`,
     "",
-    "No mantenga un segundo diario aquí.",
+    "Do not keep a second diary here.",
     "",
   ].join("\n")
 }
@@ -83,9 +88,9 @@ function stubSessionLog(): string {
   return [
     "# Session Log (stub)",
     "",
-    `Handoff entre sesiones: **[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})** (raíz del repo).`,
+    `Session handoff: **[\`${CANONICAL_MEMORY_FILE}\`](../../${CANONICAL_MEMORY_FILE})** (repo root).`,
     "",
-    "Opcional: anotar un renglón aquí **además** de actualizar la memoria canónica, nunca en su lugar.",
+    "Optional: add a line here **in addition to** updating the canonical memory, never instead of it.",
     "",
   ].join("\n")
 }
@@ -126,15 +131,24 @@ export function getMemoryFiles(project: DetectedProject): MemoryFile[] {
   ]
 }
 
-/** Create root MEMORIA_PROYECTO.md only if missing (never overwrite). */
+/** Create root PROJECT_MEMORY.md only if missing (never overwrite). */
 export function ensureCanonicalMemory(targetDir: string, project: DetectedProject): void {
-  const memoriaPath = join(targetDir, CANONICAL_MEMORY_FILE)
+  const root = join(targetDir)
+  const memoriaPath = join(root, CANONICAL_MEMORY_FILE)
+  const legacyPath = join(root, LEGACY_CANONICAL_MEMORY_FILE)
+
   if (existsSync(memoriaPath)) {
     console.log(`  ${CANONICAL_MEMORY_FILE} already exists — left unchanged`)
-    return
+  } else if (existsSync(legacyPath)) {
+    // Migrate the legacy filename in place so the canonical name is the only one on disk
+    renameSync(legacyPath, memoriaPath)
+    console.log(`  Renamed ${LEGACY_CANONICAL_MEMORY_FILE} → ${CANONICAL_MEMORY_FILE} (legacy migration)`)
+  } else {
+    writeFileSync(memoriaPath, createMemoriaProyectoSeed(project), "utf-8")
+    console.log(`  Created ${CANONICAL_MEMORY_FILE} (canonical portable memory)`)
   }
-  writeFileSync(memoriaPath, createMemoriaProyectoSeed(project), "utf-8")
-  console.log(`  Created ${CANONICAL_MEMORY_FILE} (canonical portable memory)`)
+
+  ensureChangeControlRegister(root, CANONICAL_MEMORY_FILE)
 }
 
 export function initMemory(targetDir: string, project: DetectedProject): void {

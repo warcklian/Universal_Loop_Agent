@@ -69,7 +69,7 @@ export interface MemoryConfig {
   auto_sync?: boolean
   /**
    * Canonical portable handoff Markdown at project root.
-   * Default: MEMORIA_PROYECTO.md — agents must read/update this file, not only .uagent stubs.
+   * Default: PROJECT_MEMORY.md — agents must read/update this file, not only .uagent stubs.
    */
   canonical_file?: string
 }
@@ -100,6 +100,17 @@ export interface ScopedRule {
   always_apply?: boolean
 }
 
+/** Local change control: register every change, document it in detail, then implement. */
+export interface ChangeControlConfig {
+  enabled?: boolean
+  /** Register file at project root. Default: CONTROL_CAMBIOS.md */
+  file?: string
+  /** Sequential ID prefix for entries. Default: CH */
+  id_prefix?: string
+  /** Extra project-specific rules, appended after the canon rules. */
+  rules?: string[]
+}
+
 export interface SourceConfig {
   project: ProjectConfig
   build?: BuildConfig
@@ -109,6 +120,7 @@ export interface SourceConfig {
   git?: GitConfig
   agent_loop?: AgentLoopConfig
   multi_agent?: MultiAgentConfig
+  change_control?: ChangeControlConfig
   rules?: ScopedRule[]
   universal_instructions?: string
 }

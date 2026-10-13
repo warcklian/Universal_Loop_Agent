@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { parseSource } from "./parser.ts"
+import { CHANGE_CONTROL_FILE } from "./change-control.ts"
 
 export interface DoctorCheck {
   id: string
@@ -53,6 +54,18 @@ export function runDoctor(targetDir: string): DoctorReport {
           `canonical_file=${canonical}`,
         ),
       )
+      if (cfg.change_control?.enabled !== false) {
+        const registerPath = join(root, cfg.change_control?.file || CHANGE_CONTROL_FILE)
+        checks.push(
+          check(
+            "change_control",
+            existsSync(registerPath),
+            existsSync(registerPath)
+              ? `${cfg.change_control?.file || CHANGE_CONTROL_FILE} present (change register)`
+              : `missing ${cfg.change_control?.file || CHANGE_CONTROL_FILE} — run init`,
+          ),
+        )
+      }
     } catch (e) {
       checks.push(check("yaml_valid", false, `YAML invalid: ${(e as Error).message}`))
     }
@@ -141,6 +154,7 @@ const DOCTOR_TIPS: Record<string, string> = {
   memory: "Fix: run setup-all.bat (or uagent init)",
   yaml_valid: "Fix: open universal-agent.yaml and repair YAML syntax, then setup-all.bat",
   loop_enabled: "Fix: set agent_loop.enabled: true in universal-agent.yaml, then regenerate",
+  change_control: "Fix: run setup-all.bat (or uagent init) to create the change register",
   loop_section: "Fix: re-run setup-all.bat to regenerate AGENTS.md with loop rules",
   adapters: "Fix: setup-all.bat or uagent sync --force",
   phases: "Fix: add idea.md then setup-all.bat (runs plan-from)",

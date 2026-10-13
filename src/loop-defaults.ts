@@ -1,4 +1,5 @@
 import type { AgentLoopRule } from "./schema.ts"
+import { CHANGE_CONTROL_FILE } from "./change-control.ts"
 import { loopStartPrompt } from "./idea-template.ts"
 
 /**
@@ -16,6 +17,11 @@ export function defaultConsumerLoopRules(): AgentLoopRule[] {
       instruction:
         "If PROJECT_MEMORY.md already has completed phases, resume from the first unchecked phase — do not redo finished work.",
       description: "Chat may restart; disk memory is the resume point",
+    },
+    {
+      instruction:
+        `Change control gate: before implementing any authorized change, first (1) add a row to \`${CHANGE_CONTROL_FILE}\` (ID, date, scope, status \`autorizado\`) and (2) update the documentation in detail — what and why, files affected, steps, acceptance criteria, how to verify — so any agent with only the repository can develop it. No row and no docs update, no code.`,
+      description: "Register and documentation precede implementation; the repo is the only handoff",
     },
     {
       instruction:
@@ -56,8 +62,8 @@ export function defaultConsumerLoopRules(): AgentLoopRule[] {
     },
     {
       instruction:
-        "After every substantive delivery, sync project docs that the product owns (Index.md, plan, README) for structure/behavior changes — not the toolkit folder.",
-      description: "Documentation stays with the product",
+        `After every substantive delivery, close the row in \`${CHANGE_CONTROL_FILE}\` (\`implementado\` → \`verificado\`, with files touched and verification) and sync the project docs that the product owns (PROJECT_MEMORY.md, Index.md, plan, README) for structure/behavior changes — not the toolkit folder.`,
+      description: "Documentation and register stay with the product, in the same delivery",
     },
     {
       instruction: "Explain what you changed and why at phase boundaries and at final completion",
@@ -67,13 +73,14 @@ export function defaultConsumerLoopRules(): AgentLoopRule[] {
 }
 
 /** Short activation blurb embedded in generated AGENTS.md */
-export function loopActivationLines(): string[] {
+export function loopActivationLines(canonicalMemory = "PROJECT_MEMORY.md"): string[] {
   return [
     "### How to activate",
     "",
     "- **Loop mode:** Load / attach this `AGENTS.md` in your AI editor or chat (Cursor, Claude Code, OpenCode, Copilot, Windsurf, etc.), then paste the start prompt (see below or `LOOP_START_PROMPT.txt`).",
     "- **Prompt mode:** Work without loading this file — no loop behavior activates.",
-    "- **Memory duo:** `AGENTS.md` = loop rules in-chat; `PROJECT_MEMORY.md` = durable portable handoff on disk. Use both.",
+    `- **Memory duo:** \`AGENTS.md\` = loop rules in-chat; \`${canonicalMemory}\` = durable portable handoff on disk. Use both.`,
+    `- **Change control:** \`${CHANGE_CONTROL_FILE}\` = local register of every change (row before code, docs before implementation).`,
     "",
     "### Suggested start prompt (copy-paste)",
     "",

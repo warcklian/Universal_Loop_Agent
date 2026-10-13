@@ -6,6 +6,7 @@ import {
   sectionCodeStyle,
   sectionSecurity,
   sectionGit,
+  sectionChangeControl,
   sectionAgentLoop,
   sectionMultiAgent,
   sectionRules,
@@ -16,6 +17,19 @@ function join(...sections: (string | null)[]): string {
   return sections.filter(Boolean).join("\n\n")
 }
 
+/** YAML frontmatter so editors can classify the generated file (optional but expected). */
+function frontmatter(s: SourceConfig): string {
+  const stack = s.project.stack
+  const description = s.project.description || `${s.project.name} — agent configuration`
+  const tags = [
+    ...(stack.languages ?? []),
+    ...(stack.framework ?? []),
+    ...(stack.runtime ?? []),
+  ]
+  const tagLines = (tags.length ? tags : ["agents", "loop"]).map((t) => `  - ${t}`)
+  return ["---", `description: ${JSON.stringify(description)}`, "tags:", ...tagLines, "---", ""].join("\n")
+}
+
 export function generate(source: SourceConfig): GeneratorOutput {
   const content = join(
     sectionOverview(source),
@@ -24,6 +38,7 @@ export function generate(source: SourceConfig): GeneratorOutput {
     sectionCodeStyle(source),
     sectionSecurity(source),
     sectionGit(source),
+    sectionChangeControl(source),
     sectionAgentLoop(source),
     sectionMultiAgent(source),
     sectionRules(source),
@@ -32,6 +47,6 @@ export function generate(source: SourceConfig): GeneratorOutput {
 
   return {
     file: "AGENTS.md",
-    content: content + "\n",
+    content: frontmatter(source) + content + "\n",
   }
 }

@@ -48,6 +48,8 @@ agent_loop:
   timeout_seconds: 300
   doom_loop_detection: true
   rules:
+    - instruction: "Change control gate: before implementing any authorized change, add a row to CONTROL_CAMBIOS.md (ID, date, scope, status autorizado) and update the documentation in detail so any agent can develop it from the repo alone. No row and no docs update, no code."
+      description: "Register and docs precede implementation"
     - instruction: "Always read files before editing them"
       description: "Never edit blind — understand the current state first"
     - instruction: "Run tests after every change"
@@ -65,9 +67,10 @@ multi_agent:
     enabled: true
     path: ".uagent/memory/"
     auto_sync: true
+    canonical_file: "PROJECT_MEMORY.md"
   ownership:
     - agent: "core"
-      globs: ["src/schema.ts", "src/parser.ts", "src/generator.ts", "src/cli.ts"]
+      globs: ["src/schema.ts", "src/parser.ts", "src/generator.ts", "src/cli.ts", "src/detector.ts"]
     - agent: "sections"
       globs: ["src/sections/**"]
       integrator: true
@@ -75,6 +78,11 @@ multi_agent:
     file_locking: true
     auto_detect: true
     strategy: topological
+
+change_control:
+  enabled: true
+  file: "CONTROL_CAMBIOS.md"
+  id_prefix: "CH"
 
 rules:
   - name: "Schema Types"

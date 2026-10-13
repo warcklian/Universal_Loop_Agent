@@ -1,4 +1,9 @@
 import type { SourceConfig } from "../schema.ts"
+import { CHANGE_CONTROL_FILE, CHANGE_ID_PREFIX, CHANGE_STATES, changeControlRules } from "../change-control.ts"
+import { loopActivationLines } from "../loop-defaults.ts"
+
+/** Canonical portable memory file at project root (legacy name is migrated on init). */
+const CANONICAL_MEMORY_DEFAULT = "PROJECT_MEMORY.md"
 
 function list(items: string[]): string {
   return items.join("\n")
@@ -93,6 +98,7 @@ export function sectionGit(s: SourceConfig): string | null {
 export function sectionAgentLoop(s: SourceConfig): string | null {
   const loop = s.agent_loop
   if (!loop) return null
+  const canonical = s.multi_agent?.memory?.canonical_file || CANONICAL_MEMORY_DEFAULT
   const lines = ["## Agent Loop"]
   lines.push("")
   lines.push("This section defines how the agent loop behaves. Load this file to activate loop mode.")
@@ -112,11 +118,43 @@ export function sectionAgentLoop(s: SourceConfig): string | null {
   }
 
   lines.push("")
-  lines.push("### How to use")
+  lines.push(...loopActivationLines(canonical))
+
+  return lines.join("\n")
+}
+
+/**
+ * Local change control canon: register the change, document it in detail, then implement.
+ * Rendered for every project unless `change_control.enabled: false`.
+ */
+export function sectionChangeControl(s: SourceConfig): string | null {
+  const cc = s.change_control
+  if (cc?.enabled === false) return null
+
+  const file = cc?.file || CHANGE_CONTROL_FILE
+  const idPrefix = cc?.id_prefix || CHANGE_ID_PREFIX
+  const canonical = s.multi_agent?.memory?.canonical_file || CANONICAL_MEMORY_DEFAULT
+
+  const lines = ["## Change Control (local)"]
   lines.push("")
-  lines.push("- **Loop mode:** Load this file in your agent (Claude Code, Cursor, OpenCode, etc.)")
-  lines.push("- **Prompt mode:** Work without loading this file — no loop behavior activates")
-  lines.push("- **AGENTS.md** = agent rules/loop only; project handoff memory is `MEMORIA_PROYECTO.md` (or `multi_agent.memory.canonical_file`)")
+  lines.push("Local change control for every change. No code before a registered row and a documentation update.")
+  lines.push("")
+  lines.push(bullet(`**Register file:** \`${file}\` (project root, travels with the repo)`))
+  lines.push(bullet(`**ID format:** \`${idPrefix}-0001\`, \`${idPrefix}-0002\`, … (sequential, never reused)`))
+  lines.push(bullet(`**States:** ${CHANGE_STATES.map((st) => `\`${st}\``).join(" → ")}`))
+  lines.push("")
+  lines.push("### Rules")
+  lines.push("")
+  changeControlRules(canonical).forEach((rule, i) => {
+    lines.push(`${i + 1}. ${rule}`)
+  })
+
+  if (cc?.rules?.length) {
+    lines.push("")
+    lines.push("### Project-Specific Change Rules")
+    lines.push("")
+    cc.rules.forEach((r) => lines.push(bullet(r)))
+  }
 
   return lines.join("\n")
 }
@@ -128,7 +166,7 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
   lines.push("")
 
   if (ma.memory) {
-    const canonical = ma.memory.canonical_file || "MEMORIA_PROYECTO.md"
+    const canonical = ma.memory.canonical_file || CANONICAL_MEMORY_DEFAULT
     lines.push("### Shared Memory")
     lines.push("")
     lines.push(bullet(`**Enabled:** ${ma.memory.enabled !== false ? "yes" : "no"}`))
@@ -136,7 +174,7 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
     if (ma.memory.path) {
       lines.push(bullet(`**uagent stubs path:** \`${ma.memory.path}\` (pointers only; do not duplicate the diary there)`))
     }
-    if (ma.memory.auto_sync) lines.push(bullet("**Auto-sync:** enabled — keep `MEMORIA_PROYECTO.md` (canonical) up to date after substantive work"))
+    if (ma.memory.auto_sync) lines.push(bullet("**Auto-sync:** enabled — keep `PROJECT_MEMORY.md` (canonical) up to date after substantive work"))
     lines.push("")
     lines.push("At the start of substantive work, read the canonical memory file. After finishing a delivery, update it (date, open items, short summary). Editor-local memory does not travel with the repo.")
   }

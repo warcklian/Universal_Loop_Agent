@@ -1,5 +1,25 @@
 # Universal_Loop_Agent — Master plan
 
+## Registro — 2026-10-13 (Local change control + docs gate)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Control de cambios local y documentacion obligatoria antes de implementar |
+| **Goal** | Que cada proyecto generado registre el cambio y documente en detalle **antes** de programar |
+| **Status** | Completed |
+
+### Entregado
+
+- `CONTROL_CAMBIOS.md` como registro canonico en la raiz del proyecto (se crea en `init`, nunca se pisa)
+- Seccion **Change Control (local)** en el `AGENTS.md` generado: registrar antes de codear, documentar en detalle antes de implementar, cerrar solo verificado
+- Regla de gate en `agent_loop` + linea en `CLAUDE.md`, `copilot-instructions`, `.cursorrules` y `LOOP_START_PROMPT.txt`
+- `doctor` puntua la presencia del registro (`change_control`)
+- Config `change_control.enabled / file / id_prefix / rules` parseada y sembrada por `yaml-generator`
+- Defectos preexistentes corregidos: memoria canonica (`PROJECT_MEMORY.md`), comandos del detector segun lockfile, descripcion/layout, frontmatter de `AGENTS.md`
+- 33 tests en verde, `tsc --noEmit` limpio
+
+---
+
 ## Registro — 2026-07-30 (plan-from Constraints/Notes)
 
 | Field | Value |

@@ -68,9 +68,9 @@ program
     }
 
     console.log(`\n  Done! Next steps:`)
-    console.log(`  1. Edit MEMORIA_PROYECTO.md (canonical handoff) and universal-agent.yaml if needed`)
+    console.log(`  1. Edit PROJECT_MEMORY.md (canonical handoff), CONTROL_CAMBIOS.md (change register) and universal-agent.yaml if needed`)
     console.log(`  2. Run: uagent generate`)
-    console.log(`  3. Load AGENTS.md in your AI editor (loop rules; memory stays in MEMORIA_PROYECTO.md)\n`)
+    console.log(`  3. Load AGENTS.md in your AI editor (loop rules; memory stays in PROJECT_MEMORY.md)\n`)
   })
 
 program
@@ -150,6 +150,7 @@ program
       console.log(`  Testing:   ${s.testing ? "configured" : "not set"}`)
       console.log(`  Loop:      ${s.agent_loop ? "configured" : "not set"}`)
       console.log(`  Multi:     ${s.multi_agent ? "configured" : "not set"}`)
+      console.log(`  Change:    ${s.change_control?.enabled === false ? "disabled" : "enabled"}`)
       console.log(`  Rules:     ${s.rules?.length ?? 0}`)
     } catch (e) {
       if (e instanceof ParseError) {

@@ -2,6 +2,9 @@ import { writeFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import YAML from "yaml"
 import type { DetectedProject } from "./detector.ts"
+import { defaultConsumerLoopRules } from "./loop-defaults.ts"
+import { CANONICAL_MEMORY_FILE } from "./memory.ts"
+import { CHANGE_CONTROL_FILE, CHANGE_ID_PREFIX } from "./change-control.ts"
 
 interface YamlConfig {
   project: {
@@ -52,6 +55,11 @@ interface YamlConfig {
       instruction: string
       description: string
     }>
+  }
+  change_control: {
+    enabled: boolean
+    file: string
+    id_prefix: string
   }
   multi_agent: {
     enabled: boolean
@@ -132,7 +140,7 @@ export function generateYaml(project: DetectedProject): YamlConfig {
   const config: YamlConfig = {
     project: {
       name: project.name,
-      description: `Project: ${project.name}`,
+      description: project.description?.trim() || `Project: ${project.name}`,
       stack: {},
     },
     build: {},
@@ -160,45 +168,15 @@ export function generateYaml(project: DetectedProject): YamlConfig {
     },
     agent_loop: {
       enabled: true,
-      max_iterations: 15,
+      max_iterations: 30,
       timeout_seconds: 300,
       doom_loop_detection: true,
-      rules: [
-        {
-          instruction: "Read MEMORIA_PROYECTO.md at the start of substantive work",
-          description: "Canonical portable handoff at repo root; do not rely only on editor memory",
-        },
-        {
-          instruction: "Always read files before editing them",
-          description: "Never edit blind — understand the current state first",
-        },
-        {
-          instruction: "Run tests after every change",
-          description: "Verify correctness immediately",
-        },
-        {
-          instruction: "Run linter and type checker after edits",
-          description: "Catch errors early",
-        },
-        {
-          instruction: "If no progress in 3 iterations, stop and ask the user",
-          description: "Prevent doom loops",
-        },
-        {
-          instruction: "After a substantive delivery, update MEMORIA_PROYECTO.md",
-          description: "Date, open items, short summary — never duplicate the diary into .uagent stubs",
-        },
-        {
-          instruction:
-            "After every substantive delivery (feature, bugfix, or when the user asks to review/update documentation), run a FULL documentation and scripts sync — not only files touched by the latest diff. Multi-agent: each agent updates the shared canon as it implements and tests.",
-          description:
-            "Checklist (all that apply): VERSION vs package.json vs API version strings; Alembic/migration head refs in ops docs and scripts; Indice.md for new scripts/routes; user/ops manuals if UI or deploy changed; plan maestro registro; scripts README; stubs for moved docs must exist; no absolute machine paths in versioned scripts. Read MEMORIA_PROYECTO.md first to see other agents work.",
-        },
-        {
-          instruction: "Explain what you changed and why",
-          description: "Always report back with a summary",
-        },
-      ],
+      rules: defaultConsumerLoopRules() as YamlConfig["agent_loop"]["rules"],
+    },
+    change_control: {
+      enabled: true,
+      file: CHANGE_CONTROL_FILE,
+      id_prefix: CHANGE_ID_PREFIX,
     },
     multi_agent: {
       enabled: true,
@@ -206,7 +184,7 @@ export function generateYaml(project: DetectedProject): YamlConfig {
         enabled: true,
         path: ".uagent/memory/",
         auto_sync: true,
-        canonical_file: "MEMORIA_PROYECTO.md",
+        canonical_file: CANONICAL_MEMORY_FILE,
       },
       conflict: {
         file_locking: true,
@@ -216,11 +194,12 @@ export function generateYaml(project: DetectedProject): YamlConfig {
     },
     universal_instructions: [
       `This project is ${project.name}.`,
-      "Canonical portable memory: MEMORIA_PROYECTO.md (repo root). Read it first; update it after substantive deliveries.",
-      ".uagent/memory/ holds stubs that point to MEMORIA_PROYECTO.md — do not keep a second diary there.",
-      "AGENTS.md = agent rules and loop only. Edit universal-agent.yaml (repo root), then run Universal_Loop_Agent/generate.",
+      `Canonical portable memory: ${CANONICAL_MEMORY_FILE} (repo root). Read it first; update it after substantive deliveries.`,
+      ".uagent/memory/ holds stubs that point to the canonical memory file — do not keep a second diary there.",
+      `Local change control: ${CHANGE_CONTROL_FILE} — register every change before coding and update the docs in detail before implementing.`,
+      "AGENTS.md = agent rules and loop only. Edit universal-agent.yaml (repo root), then run uagent generate.",
       "Load AGENTS.md to activate loop mode — travels with the repo across machines and AI editors.",
-      "Sync docs/scripts is a loop rule: full canon sync on delivery, not only the latest feature files.",
+      "The toolkit is not product code — never import it or couple the product build to it.",
     ].join("\n"),
   }
 

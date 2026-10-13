@@ -12,6 +12,7 @@ Plan: `Universal_Loop_Agent_Plan.md`. Index: `Index.md`.
 
 - Config source: `universal-agent.yaml` → `uagent generate` → `AGENTS.md`.
 - Canonical handoff: `PROJECT_MEMORY.md` at project root; `.uagent/memory/` is stubs only.
+- Change control: `CONTROL_CAMBIOS.md` at project root — register the change before coding and update the docs in detail before implementing.
 - Paths in versioned files must be relative (portable across machines).
 - Product filenames and defaults are English-only.
 - After substantive changes: `bun test`, `bun run typecheck`, update plan/Index if structure changed.

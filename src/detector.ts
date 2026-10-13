@@ -1,14 +1,22 @@
-import { readFileSync, readdirSync, existsSync } from "node:fs"
+import { readFileSync, readdirSync, existsSync, statSync } from "node:fs"
 import { resolve, join, basename } from "node:path"
 
 export interface DetectedProject {
   name: string
   root: string
+  /** One-line summary from README (or package.json) — feeds universal-agent.yaml description. */
+  description?: string
   languages: string[]
   frameworks: string[]
   runtime: string[]
   packageManagers: string[]
   databases: string[]
+  /** Top-level folders under the source root (e.g. src/cli, src/memory). */
+  topModules: string[]
+  /** Short structural hints (source root, docs folder, tests, workspaces). */
+  layoutHints: string[]
+  /** package.json script names. */
+  scriptNames: string[]
   buildCommands: {
     install?: string
     dev?: string
@@ -63,11 +71,20 @@ function detectLanguages(root: string): string[] {
     if (extMap[ext]) langs.add(extMap[ext])
   }
 
-  if (existsSync(join(root, "src"))) {
+  // Light deep scan: source-root files plus one folder level inside it (src/cli/*.ts)
+  for (const sourceRoot of ["src", "lib", "app"]) {
+    const sourcePath = join(root, sourceRoot)
+    if (!existsSync(sourcePath)) continue
     try {
-      for (const file of readdirSync(join(root, "src"))) {
-        const ext = "." + file.split(".").slice(1).join(".")
+      for (const entry of readdirSync(sourcePath)) {
+        const ext = "." + entry.split(".").slice(1).join(".")
         if (extMap[ext]) langs.add(extMap[ext])
+        const subPath = join(sourcePath, entry)
+        if (!statSync(subPath).isDirectory()) continue
+        for (const nested of readdirSync(subPath)) {
+          const nestedExt = "." + nested.split(".").slice(1).join(".")
+          if (extMap[nestedExt]) langs.add(extMap[nestedExt])
+        }
       }
     } catch {}
   }
@@ -187,20 +204,96 @@ function detectDatabases(root: string): string[] {
   return [...new Set(dbs)]
 }
 
+/** Runner used for package.json scripts, derived from the lockfile actually present. */
+function packageRunner(root: string): string {
+  if (existsSync(join(root, "bun.lock")) || existsSync(join(root, "bun.lockb"))) return "bun"
+  if (existsSync(join(root, "pnpm-lock.yaml"))) return "pnpm"
+  if (existsSync(join(root, "yarn.lock"))) return "yarn"
+  return "npm"
+}
+
+/** First meaningful README paragraph (skips title, badges and HTML blocks). */
+function readmeSummary(text: string): string {
+  const parts: string[] = []
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim()
+    if (!line) {
+      if (parts.length) break
+      continue
+    }
+    if (line.startsWith("#")) continue
+    if (line.startsWith("!") || line.startsWith("[!")) continue
+    if (/^<[^>]+>$/.test(line) || /^<div|^<p align/i.test(line)) continue
+    parts.push(line)
+    if (parts.join(" ").length > 240) break
+  }
+  return parts.join(" ").trim().slice(0, 240)
+}
+
+function detectDescription(pkg: Record<string, unknown> | null, root: string): string {
+  for (const name of ["README.md", "readme.md", "README.markdown", "README.txt", "README"]) {
+    const path = join(root, name)
+    if (!existsSync(path)) continue
+    try {
+      const summary = readmeSummary(readFileSync(path, "utf-8"))
+      if (summary) return summary
+    } catch {}
+  }
+  const pkgDescription = pkg?.["description"]
+  return typeof pkgDescription === "string" ? pkgDescription.trim() : ""
+}
+
+function detectLayout(pkg: Record<string, unknown> | null, root: string): {
+  topModules: string[]
+  layoutHints: string[]
+  scriptNames: string[]
+} {
+  const topModules: string[] = []
+  const layoutHints: string[] = []
+
+  const sourceRoot = ["src", "lib", "app"].find((dir) => existsSync(join(root, dir)))
+  if (sourceRoot) {
+    layoutHints.push(`Source root: ${sourceRoot}/`)
+    try {
+      for (const entry of readdirSync(join(root, sourceRoot))) {
+        if (entry.startsWith(".") || entry === "node_modules") continue
+        if (entry.lastIndexOf(".") > 0) continue // a file, not a module folder
+        topModules.push(`${sourceRoot}/${entry}`)
+      }
+    } catch {}
+  }
+
+  if (existsSync(join(root, "docs"))) layoutHints.push("Docs folder: docs/")
+  if (existsSync(join(root, "tests")) || existsSync(join(root, "test"))) layoutHints.push("Tests folder")
+  const workspaces = pkg?.["workspaces"]
+  if (Array.isArray(workspaces)) layoutHints.push(`Monorepo workspaces: ${workspaces.length}`)
+
+  const scripts = pkg?.["scripts"]
+  const scriptNames =
+    scripts && typeof scripts === "object" && !Array.isArray(scripts)
+      ? Object.keys(scripts as Record<string, unknown>)
+      : []
+
+  return { topModules, layoutHints, scriptNames }
+}
+
 function detectBuildCommands(
   pkg: Record<string, unknown> | null,
   root: string,
 ): DetectedProject["buildCommands"] {
   const cmds: DetectedProject["buildCommands"] = {}
+  const runner = packageRunner(root)
+
+  if (pkg) cmds.install = `${runner} install`
 
   if (pkg?.scripts) {
     const scripts = pkg.scripts as Record<string, string>
-    if (scripts.dev) cmds.dev = `npm run dev`
-    if (scripts.build) cmds.build = `npm run build`
-    if (scripts.lint) cmds.lint = `npm run lint`
-    if (scripts.test) cmds.test = `npm test`
-    if (scripts.typecheck || scripts["type-check"]) cmds.typecheck = `npm run ${scripts.typecheck ? "typecheck" : "type-check"}`
-    if (scripts.format || scripts.prettier) cmds.format = `npm run ${scripts.format ? "format" : "prettier"}`
+    if (scripts.dev) cmds.dev = `${runner} run dev`
+    if (scripts.build) cmds.build = `${runner} run build`
+    if (scripts.lint) cmds.lint = `${runner} run lint`
+    if (scripts.test) cmds.test = `${runner} run test`
+    if (scripts.typecheck || scripts["type-check"]) cmds.typecheck = `${runner} run ${scripts.typecheck ? "typecheck" : "type-check"}`
+    if (scripts.format || scripts.prettier) cmds.format = `${runner} run ${scripts.format ? "format" : "prettier"}`
   }
 
   if (existsSync(join(root, "Makefile"))) {
@@ -238,15 +331,20 @@ export function detectProject(targetDir: string): DetectedProject {
   const root = resolve(targetDir)
   const pkg = readFileJSON(join(root, "package.json"))
   const projectName = (pkg?.name as string) || basename(root)
+  const layout = detectLayout(pkg, root)
 
   return {
     name: projectName,
     root,
+    description: detectDescription(pkg, root),
     languages: detectLanguages(root),
     frameworks: detectFrameworks(pkg),
     runtime: detectRuntime(pkg, root),
     packageManagers: detectPackageManagers(root),
     databases: detectDatabases(root),
+    topModules: layout.topModules,
+    layoutHints: layout.layoutHints,
+    scriptNames: layout.scriptNames,
     buildCommands: detectBuildCommands(pkg, root),
     hasGit: existsSync(join(root, ".git")),
   }
