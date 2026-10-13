@@ -1,6 +1,6 @@
 import YAML from "yaml"
-import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
+import { readTextFile } from "./fs-util.ts"
 import type {
   SourceConfig,
   ProjectConfig,
@@ -202,10 +202,8 @@ function validateRules(raw: unknown[] | undefined): ScopedRule[] | undefined {
 
 export function parseSource(filePath: string): SourceConfig {
   const resolved = resolve(filePath)
-  let raw: string
-  try {
-    raw = readFileSync(resolved, "utf-8")
-  } catch {
+  const raw = readTextFile(resolved)
+  if (raw === null) {
     throw new ParseError(`Cannot read file: ${resolved}`)
   }
 

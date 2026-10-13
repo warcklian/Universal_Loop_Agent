@@ -37,6 +37,8 @@ Universal_Loop_Agent/
     ├── parser.ts — read and validate YAML → SourceConfig
     ├── generator.ts — orchestrate sections → AGENTS.md (+ frontmatter)
     ├── detector.ts — stack + light deep scan (README, src layout, scripts)
+    ├── fs-util.ts - BOM-tolerant text/JSON readers (package.json, YAML, README)
+    ├── fs-util.test.ts - BOM reader + consumer-project regression tests
     ├── detector.test.ts — detector / parse / generateYaml / light-deep tests
     ├── memory.ts — PROJECT_MEMORY.md + .uagent/memory stubs + legacy migration
     ├── change-control.ts — CHANGE_CONTROL.md canon: rules, seed, ensure
@@ -77,7 +79,7 @@ Universal_Loop_Agent/
 ## Last review
 
 - **Date:** 2026-10-13
-- **Scope:** English-only product filenames (CHANGE_CONTROL.md) and instructions; self-update check with safe fast-forward (uagent update, setup-all step 0b); local change control canon with docs-before-code gate; canonical memory filename fix (PROJECT_MEMORY.md); detector build commands/description/layout; AGENTS.md frontmatter
+- **Scope:** English-only product filenames (CHANGE_CONTROL.md) and instructions; toolkit self-update with safe fast-forward (uagent update, setup-all step 0b); local change control canon with docs-before-code gate; BOM-tolerantFile readers (PowerShell/Notepad files); canonical memory filename fix; detector build commands/description/layout; AGENTS.md frontmatter
 
 ## Pending deeper review
 

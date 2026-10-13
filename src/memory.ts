@@ -1,7 +1,8 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync, renameSync } from "node:fs"
+import { writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs"
 import { join } from "node:path"
 import type { DetectedProject } from "./detector.ts"
 import { ensureChangeControlRegister } from "./change-control.ts"
+import { readJsonFile } from "./fs-util.ts"
 
 /** Canonical portable handoff at project root (survives folder/machine moves). */
 export const CANONICAL_MEMORY_FILE = "PROJECT_MEMORY.md"
@@ -189,8 +190,8 @@ export function ensureMemory(targetDir: string, project: DetectedProject): void 
   }
 
   try {
-    const raw = readFileSync(indexPath, "utf-8")
-    const idx = JSON.parse(raw) as { canonicalMemory?: string }
+    const idx = readJsonFile<{ canonicalMemory?: string }>(indexPath)
+    if (!idx) throw new Error("unreadable index.json")
     if (idx.canonicalMemory !== CANONICAL_MEMORY_FILE) {
       writeFileSync(indexPath, createIndexFile(project), "utf-8")
       writeFileSync(join(memoryDir, "context.md"), stubContext(), "utf-8")

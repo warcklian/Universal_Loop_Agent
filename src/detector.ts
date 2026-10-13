@@ -1,5 +1,6 @@
-import { readFileSync, readdirSync, existsSync, statSync } from "node:fs"
+import { readdirSync, existsSync, statSync } from "node:fs"
 import { resolve, join, basename } from "node:path"
+import { readJsonFile, readTextFile } from "./fs-util.ts"
 
 export interface DetectedProject {
   name: string
@@ -30,11 +31,7 @@ export interface DetectedProject {
 }
 
 function readFileJSON(filePath: string): Record<string, unknown> | null {
-  try {
-    return JSON.parse(readFileSync(filePath, "utf-8"))
-  } catch {
-    return null
-  }
+  return readJsonFile<Record<string, unknown>>(filePath)
 }
 
 function detectLanguages(root: string): string[] {
@@ -191,7 +188,8 @@ function detectDatabases(root: string): string[] {
   for (const dcPath of [dockerCompose, dockerComposeYaml]) {
     if (existsSync(dcPath)) {
       try {
-        const content = readFileSync(dcPath, "utf-8")
+        const content = readTextFile(dcPath)
+      if (content === null) continue
         if (content.includes("postgres")) dbs.push("postgresql")
         if (content.includes("mysql")) dbs.push("mysql")
         if (content.includes("mongo")) dbs.push("mongodb")
@@ -233,11 +231,10 @@ function readmeSummary(text: string): string {
 function detectDescription(pkg: Record<string, unknown> | null, root: string): string {
   for (const name of ["README.md", "readme.md", "README.markdown", "README.txt", "README"]) {
     const path = join(root, name)
-    if (!existsSync(path)) continue
-    try {
-      const summary = readmeSummary(readFileSync(path, "utf-8"))
-      if (summary) return summary
-    } catch {}
+    const text = existsSync(path) ? readTextFile(path) : null
+    if (text === null) continue
+    const summary = readmeSummary(text)
+    if (summary) return summary
   }
   const pkgDescription = pkg?.["description"]
   return typeof pkgDescription === "string" ? pkgDescription.trim() : ""
@@ -298,7 +295,7 @@ function detectBuildCommands(
 
   if (existsSync(join(root, "Makefile"))) {
     try {
-      const makefile = readFileSync(join(root, "Makefile"), "utf-8")
+      const makefile = readTextFile(join(root, "Makefile")) ?? ""
       if (makefile.includes("dev:") && !cmds.dev) cmds.dev = "make dev"
       if (makefile.includes("build:") && !cmds.build) cmds.build = "make build"
       if (makefile.includes("test:") && !cmds.test) cmds.test = "make test"

@@ -1,7 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, writeFileSync } from "node:fs"
 import { basename, join, resolve } from "node:path"
 import { CANONICAL_MEMORY_FILE, ensureCanonicalMemory } from "./memory.ts"
 import { detectProject } from "./detector.ts"
+import { readTextFile } from "./fs-util.ts"
 
 export interface PlanFromResult {
   ideaFile: string
@@ -157,7 +158,10 @@ export function planFromIdea(targetDir: string, ideaRelOrAbs: string): PlanFromR
   const project = detectProject(root)
   ensureCanonicalMemory(root, project)
 
-  const ideaText = readFileSync(ideaPath, "utf-8")
+  const ideaText = readTextFile(ideaPath)
+  if (ideaText === null) {
+    throw new Error(`Idea/plan file not found: ${ideaPath}`)
+  }
   const memoryPath = join(root, CANONICAL_MEMORY_FILE)
 
   if (isUnfilledIdeaTemplate(ideaText)) {
@@ -182,7 +186,7 @@ export function planFromIdea(targetDir: string, ideaRelOrAbs: string): PlanFromR
     }
   }
 
-  const prev = readFileSync(memoryPath, "utf-8")
+  const prev = readTextFile(memoryPath) ?? ""
   const next = upsertPhasesSection(prev, phases, basename(ideaPath))
   writeFileSync(memoryPath, next, "utf-8")
 

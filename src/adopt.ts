@@ -1,8 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import YAML from "yaml"
 import { detectProject } from "./detector.ts"
 import { generateYaml } from "./yaml-generator.ts"
+import { readTextFile } from "./fs-util.ts"
 
 const ADOPT_CANDIDATES = [
   "AGENTS.md",
@@ -30,7 +31,9 @@ function pickBestSource(root: string, preferred?: string): string | null {
     const full = join(root, rel)
     if (!existsSync(full)) continue
     try {
-      const len = readFileSync(full, "utf-8").trim().length
+      const text = readTextFile(full)
+      if (text === null) continue
+      const len = text.trim().length
       if (!best || len > best.len) best = { path: full, len }
     } catch {
       continue
@@ -87,7 +90,7 @@ export function adoptProject(
     }
   }
 
-  const imported = readFileSync(sourcePath, "utf-8").trim()
+  const imported = (readTextFile(sourcePath) ?? "").trim()
   const block = [
     "",
     "# --- adopted from existing editor instructions ---",
@@ -122,7 +125,16 @@ export function adoptProject(
   }
 
   // Append into existing YAML as universal_instructions addition (text-safe)
-  let raw = readFileSync(yamlPath, "utf-8")
+  let raw = readTextFile(yamlPath)
+  if (raw === null) {
+    return {
+      sourceFile: sourcePath,
+      yamlPath,
+      createdYaml: false,
+      appendedInstructions: false,
+      message: "universal-agent.yaml could not be read — skipped",
+    }
+  }
   if (raw.includes("# --- adopted from existing editor instructions ---")) {
     return {
       sourceFile: sourcePath,

@@ -1,5 +1,23 @@
 # Universal_Loop_Agent — Master plan
 
+## Record — 2026-10-13 (BOM-tolerant file readers)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Files saved with a UTF-8 BOM (PowerShell redirection, older Notepad) read as unreadable |
+| **Goal** | Detection, doctor and parser must not fail on Windows-created files |
+| **Status** | Completed |
+
+### Delivered
+
+- New `src/fs-util.ts`: `readTextFile` / `readJsonFile` strip a leading BOM
+- `package.json`, `universal-agent.yaml`, README and the memory index now read through it
+- Regression tests for the reader plus a consumer project with a BOM'd `package.json`
+- 47 tests in green, `tsc --noEmit` clean
+
+---
+
+
 ## Record — 2026-10-13 (Local change control + docs gate)
 
 | Field | Value |

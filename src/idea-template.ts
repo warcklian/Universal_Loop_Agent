@@ -1,6 +1,7 @@
-import { copyFileSync, existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs"
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { readTextFile } from "./fs-util.ts"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -106,6 +107,7 @@ export function writeStartPromptFile(targetDir: string): string {
 
 export function readTemplatePreview(): string {
   const p = ideaTemplatePath()
-  if (!existsSync(p)) return ""
-  return readFileSync(p, "utf-8").slice(0, 200)
+  const raw = readTextFile(p)
+  if (raw === null) return ""
+  return raw.slice(0, 200)
 }

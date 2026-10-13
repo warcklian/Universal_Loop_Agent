@@ -1,7 +1,8 @@
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { parseSource } from "./parser.ts"
 import { CHANGE_CONTROL_FILE } from "./change-control.ts"
+import { readJsonFile, readTextFile } from "./fs-util.ts"
 
 export interface DoctorCheck {
   id: string
@@ -72,7 +73,7 @@ export function runDoctor(targetDir: string): DoctorReport {
   }
 
   if (existsSync(agentsPath)) {
-    const body = readFileSync(agentsPath, "utf-8")
+    const body = readTextFile(agentsPath) ?? ""
     checks.push(
       check(
         "loop_section",
@@ -100,7 +101,7 @@ export function runDoctor(targetDir: string): DoctorReport {
   )
 
   if (existsSync(memoryPath)) {
-    const mem = readFileSync(memoryPath, "utf-8")
+    const mem = readTextFile(memoryPath) ?? ""
     checks.push(
       check(
         "phases",
@@ -122,8 +123,10 @@ export function runDoctor(targetDir: string): DoctorReport {
 
   const pkgPath = join(root, "package.json")
   if (existsSync(pkgPath)) {
-    try {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { scripts?: Record<string, string> }
+    const pkg = readJsonFile<{ scripts?: Record<string, string> }>(pkgPath)
+    if (!pkg) {
+      checks.push(check("test_script", false, "package.json unreadable"))
+    } else {
       checks.push(
         check(
           "test_script",
@@ -131,8 +134,6 @@ export function runDoctor(targetDir: string): DoctorReport {
           pkg.scripts?.test ? "package.json has test script" : "no test script (optional but recommended)",
         ),
       )
-    } catch {
-      checks.push(check("test_script", false, "package.json unreadable"))
     }
   }
 

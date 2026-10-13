@@ -34,6 +34,7 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 - [x] plan-from ignores Constraints/Notes body (only Must have / Nice to have / custom ##)
 - [x] Local change control canon: CHANGE_CONTROL.md register + docs-before-code gate in every generated project
 - [x] English-only filenames and instructions + toolkit self-update (uagent update, setup-all step 0b)
+- [x] BOM-tolerant file readers (package.json / YAML / README created by PowerShell or Notepad)
 - [ ] Public npm packaging (optional)
 
 ## Open items
@@ -46,4 +47,5 @@ _Ordered delivery checklist. Mark done only after implement + tests._
 
 Change control is now canon: `uagent init` seeds `CHANGE_CONTROL.md` at the project root, `generate` renders a **Change Control** section (register before code, document in detail before implementing, close only when verified), and the loop rules, adapters, start prompt and doctor all reference it. Pre-existing defects fixed along the way: canonical memory was written as `MEMORIA_PROYECTO.md` while the rest expected `PROJECT_MEMORY.md`, `detector` always emitted `npm` commands and had no description/layout scan, and generated `AGENTS.md` lacked frontmatter. 33 tests pass, `tsc --noEmit` clean.
 English-only canon: the change register was renamed `CONTROL_CAMBIOS.md` → `CHANGE_CONTROL.md` (with upgrade migrations for existing projects), register states and the seeded register text are English, and the toolkit now self-updates: `uagent update` runs `git fetch` + `merge --ff-only` only, wired into setup-all as step 0b. Offline, dirty, diverged or detached cases are reported and never forced. 40 tests pass.
+BOM tolerance: `package.json`, `universal-agent.yaml`, README and the memory index are now read through `src/fs-util.ts`, which strips a leading UTF-8 BOM, so files created with PowerShell redirection or older Notepad no longer read as "unreadable" and their scripts are detected again. 47 tests pass.
 Copy updated toolkit into ComfyUI and re-run setup-all to refresh PROJECT_MEMORY phases.
