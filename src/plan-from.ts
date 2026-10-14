@@ -158,10 +158,7 @@ export function planFromIdea(targetDir: string, ideaRelOrAbs: string): PlanFromR
   const project = detectProject(root)
   ensureCanonicalMemory(root, project)
 
-  const ideaText = readTextFile(ideaPath)
-  if (ideaText === null) {
-    throw new Error(`Idea/plan file not found: ${ideaPath}`)
-  }
+  const ideaText = readFileSync(ideaPath, "utf-8")
   const memoryPath = join(root, CANONICAL_MEMORY_FILE)
 
   if (isUnfilledIdeaTemplate(ideaText)) {
