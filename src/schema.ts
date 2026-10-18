@@ -86,11 +86,49 @@ export interface ConflictConfig {
   strategy?: "topological" | "sequential" | "worktree"
 }
 
+export interface ResearchConfig {
+  enabled?: boolean
+  methodology?: string
+  /** Mark which model/agent performed the research so all agents know who did it. */
+  investigator_mark?: string
+  /** Another agent can verify this research and give its ok or feedback. */
+  cross_validation?: string
+  /** The resulting solution must be functional, not only valid on paper. */
+  functional_proof?: string
+}
+
+export interface ValidationConfig {
+  enabled?: boolean
+  /** Review what is already closed: is it well done? Did any agent omit something? */
+  closed_phase_review?: string
+  /** If 2+ agents agree the implemented alternative is functional, the phase can be closed. */
+  functional_not_just_validated?: string
+  /** The agent is not the only judge of its own success. */
+  independent_verifier?: string
+}
+
+export interface ContextPreservationConfig {
+  enabled?: boolean
+  mode?: "complement" | "update" | "complement_or_update"
+  never_overwrite?: boolean
+  protected_files?: string[]
+  rule?: string
+}
+
+export interface OrchestrationConfig {
+  parallel?: boolean
+  /** Canonical persistent memory used as the shared coordinator (no extra files). */
+  shared_memory?: string
+  avoid_new_files?: boolean
+  agents_share_state?: boolean
+}
+
 export interface MultiAgentConfig {
   enabled?: boolean
   memory?: MemoryConfig
   ownership?: OwnershipEntry[]
   conflict?: ConflictConfig
+  orchestration?: OrchestrationConfig
 }
 
 export interface ScopedRule {
@@ -123,6 +161,9 @@ export interface SourceConfig {
   change_control?: ChangeControlConfig
   rules?: ScopedRule[]
   universal_instructions?: string
+  research?: ResearchConfig
+  validation?: ValidationConfig
+  context_preservation?: ContextPreservationConfig
 }
 
 export interface GeneratorOutput {

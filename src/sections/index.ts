@@ -222,3 +222,83 @@ export function sectionUniversal(s: SourceConfig): string | null {
   if (!s.universal_instructions) return null
   return ["## Additional Instructions", "", s.universal_instructions.trim()].join("\n")
 }
+
+/**
+ * Autonomous adaptive delivery: research-backed methodology, closed-phase review,
+ * context preservation when running the .bat entry points, and multi-agent
+ * orchestration coordinated through PROJECT_MEMORY.md (no extra files).
+ */
+export function sectionAutonomousDelivery(s: SourceConfig): string | null {
+  const r = s.research
+  const v = s.validation
+  const c = s.context_preservation
+  const o = s.multi_agent?.orchestration
+  if (!r && !v && !c && !o) return null
+
+  const lines = ["## Autonomous Adaptive Delivery (ULA)"]
+  lines.push("")
+  lines.push("This project is driven by an autonomous, adaptive loop agent. Load `AGENTS.md` in any AI editor (OpenCode, Cursor, Copilot, Claude Code, Windsurf, etc.) to activate it.")
+  lines.push("")
+
+  if (r) {
+    lines.push("### 1. Autonomous research — methodology, language, framework")
+    lines.push("")
+    lines.push("- Never implement `plan.md` blindly. Before each phase, research whether the proposed methodology, programming language and framework are the best choice to deliver a quality product, fast and scalable.")
+    if (r.investigator_mark) lines.push(`- Mark which model/agent performed the research, so every agent knows who did it: ${r.investigator_mark}.`)
+    else lines.push("- Mark which model/agent performed the research, so every agent knows who did it.")
+    if (r.cross_validation) lines.push(`- Any other agent reading the research may verify it: give the ok if it agrees, or add feedback with improvements the researcher did not propose or take for granted: ${r.cross_validation}.`)
+    else lines.push("- Any other agent reading the research may verify it: give the ok if it agrees, or add feedback with improvements the researcher did not propose or take for granted.")
+    if (r.functional_proof) lines.push(`- Research counts as good only when the resulting solution is functional, not only valid on paper: ${r.functional_proof}.`)
+    else lines.push("- Research counts as good only when the resulting solution is functional, not only valid on paper.")
+    lines.push("")
+  }
+
+  if (v) {
+    lines.push("### 2. Closed-phase review — evidence-based closure, not assumptions")
+    lines.push("")
+    lines.push("- Run `plan.md` in ordered phases. Before marking a phase closed, review what is already closed: is it well done? Did any agent omit something?")
+    if (v.closed_phase_review) lines.push(`- ${v.closed_phase_review}`)
+    else lines.push("- A closed phase is not assumed correct by default.")
+    lines.push("- A phase is closed only when: code for the phase is in place, relevant tests/checks for that phase pass, and `PROJECT_MEMORY.md` marks the phase `[x]` with a brief note of the paths touched.")
+    if (v.functional_not_just_validated) lines.push(`- ${v.functional_not_just_validated}`)
+    else lines.push("- If two or more agents validated and agreed that the implemented alternative is functional (not only validated), the phase can be closed.")
+    lines.push("- Even when closed, it is not omitted from review when the user requests a system analysis or another agent runs `AGENTS.md`.")
+    if (v.independent_verifier) lines.push(`- ${v.independent_verifier}`)
+    else lines.push("- The agent is not the only judge of its own success: acceptance criteria must be provable by an independent mechanism.")
+    lines.push("")
+  }
+
+  if (c) {
+    lines.push("### 3. Context preservation when running the .bat entry points")
+    lines.push("")
+    lines.push("- Before running `init.bat`, `setup-all.bat` or `generate.bat`, check whether `AGENTS.md`, `PROJECT_MEMORY.md`, `CHANGE_CONTROL.md`, `idea.md` and `plan.md` (or `Universal_Loop_Agent_Plan.md`) already exist.")
+    lines.push("- Never replace those files with new versions just because. Complement or update what exists; create it only when missing.")
+    lines.push("- Never lose the project's progress context through an unconsidered overwrite.")
+    if (c.rule) lines.push(`- ${c.rule}`)
+    lines.push("")
+  }
+
+  if (o) {
+    lines.push("### 4. Parallel multi-agent orchestration (PERMANENT MEMORY AS COORDINATOR)")
+    lines.push("")
+    lines.push("- Use `PROJECT_MEMORY.md` as the permanent memory and as the multi-agent coordinator; do not create unnecessary orchestrator files.")
+    lines.push("- Each agent reads the memory before starting, so every agent knows what the others are doing: independent work, together, without getting in each other's way.")
+    lines.push("- Each agent owns specific file domains (Ownership Matrix) and does not edit outside its domain.")
+    lines.push("- File locking, auto-detect of collisions and topological merge strategy are enabled.")
+    if (o.shared_memory) lines.push(`- Shared memory: \`${o.shared_memory}\`.`)
+    lines.push("")
+  }
+
+  lines.push("### Loop rules (operating cycle)")
+  lines.push("")
+  lines.push("- Read files before editing them.")
+  lines.push("- Act → observe the real result → adapt the next step (closed execution cycle).")
+  lines.push("- If a solution fails, do not repeat it indefinitely: identify the cause, propose alternatives, and choose a test that distinguishes them.")
+  lines.push("- After every substantive change run the project tests, linter and type checker.")
+  lines.push("- Register every authorized change in `CHANGE_CONTROL.md` (row, date, scope, status `authorized`) and document in detail before writing code: what, why, files, steps, acceptance and verification. No row and no docs, no code.")
+  lines.push("- Close a phase only when code + checks pass + `PROJECT_MEMORY.md` marks it `[x]` with paths touched.")
+  lines.push("- If there is no progress in 3 iterations, stop and ask the user (doom-loop detection). Never ask the user to say \"continue\" between successful phases.")
+  lines.push("- Explain what changed and why at phase boundaries and at final completion.")
+
+  return lines.join("\n")
+}

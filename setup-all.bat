@@ -106,7 +106,7 @@ if not exist "..\universal-agent.yaml" (
     pause
     exit /b 1
 )
-call bun run src/cli.ts generate ../universal-agent.yaml -o .. --force --adapters
+call bun run src/cli.ts generate ../universal-agent.yaml -o .. --adapters
 if %errorlevel% neq 0 (
     echo  [FAIL] generate failed.
     pause
@@ -135,14 +135,12 @@ echo    universal-agent.yaml   config ^(re-run setup-all after edits^)
 echo.
 echo  YOUR 3 STEPS:
 echo    1. Open the PARENT project in your AI editor
-echo    2. Load / attach AGENTS.md
-echo    3. Paste this prompt ^(also in LOOP_START_PROMPT.txt^):
+echo    2. Load / attach AGENTS.md (the loop activates automatically — no prompt to paste)
+echo    3. Start implementing phase by phase
 echo.
 echo  --------------------------------------------------------------------------
-type ..\LOOP_START_PROMPT.txt 2>nul
-if errorlevel 1 (
-  echo  Load AGENTS.md. Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md. Implement phase by phase until done. Do not ask to continue between phases.
-)
+echo  AGENTS.md is never replaced blindly: init/setup-all/generate only update it if the source YAML changed.
+echo  Existing PROJECT_MEMORY.md, CHANGE_CONTROL.md, idea.md and plan.md are preserved.
 echo  --------------------------------------------------------------------------
 echo.
 echo  Re-run setup-all.bat after editing idea.md or universal-agent.yaml.

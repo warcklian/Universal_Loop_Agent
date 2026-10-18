@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { basename, join, resolve } from "node:path"
 import { CANONICAL_MEMORY_FILE, ensureCanonicalMemory } from "./memory.ts"
 import { detectProject } from "./detector.ts"

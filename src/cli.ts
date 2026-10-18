@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { Command } from "commander"
-import { writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import * as readline from "node:readline"
 import { parseSource, ParseError } from "./parser.ts"
@@ -107,11 +107,15 @@ program
       }
 
       if (existsSync(outPath) && !opts.force) {
-        const overwrite = await askConfirmation(`${result.file} already exists. Overwrite?`)
-        if (!overwrite) {
-          console.log(`  Skipped ${result.file}`)
+        const existing = readFileSync(outPath, "utf-8")
+        if (existing === result.content) {
+          console.log(`  ${result.file} unchanged — skipped`)
           return
         }
+        // Safe write: update AGENTS.md only when the source YAML really changed.
+        // Never blindly replace; the project's context (PROJECT_MEMORY.md,
+        // CHANGE_CONTROL.md, idea.md, plan.md) is owned by init/memory and is
+        // never touched here.
       }
 
       const dir = dirname(outPath)

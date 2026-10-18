@@ -68,6 +68,12 @@ Local change control for every change. No code before a registered row and a doc
 4. **Close only when verified** — set the row to `implemented` (then `verified`) only after the code is in place, the tests/checks for that change pass, and the docs match the implemented behavior. Record the files touched and the verification used.
 5. **Local and portable** — `CHANGE_CONTROL.md` lives at project root and travels with the repo; it is the change history that complements `PROJECT_MEMORY.md` (phases/handoff) and `Index.md` (navigation).
 
+### Project-Specific Change Rules
+
+- El ID es secuencial y nunca se reusa (CH-0001, CH-0002, …).
+- Cierra la fila solo cuando el código está en su lugar, las pruebas pasan y la documentación coincide con el comportamiento implementado (implemented → verified).
+- Registra los archivos tocados y la verificación usada.
+
 ## Agent Loop
 
 This section defines how the agent loop behaves. Load this file to activate loop mode.
@@ -78,23 +84,25 @@ This section defines how the agent loop behaves. Load this file to activate loop
 
 ### Loop Rules
 
-- Change control gate: before implementing any authorized change, add a row to CHANGE_CONTROL.md (ID, date, scope, status authorized) and update the documentation in detail so any agent can develop it from the repo alone. No row and no docs update, no code.
-- Always read files before editing them
-- Run tests after every change
-- Run linter and type checker after edits
-- If no progress in 3 iterations, stop and ask the user
-- Explain what you changed and why
+- Carga AGENTS.md en el chat para activar el modo loop; sin él se trabaja en modo prompt (sin bucle automático).
+- Al iniciar la sesión lee PROJECT_MEMORY.md, luego idea.md / plan.md y universal-agent.yaml. El disco es la fuente de verdad y el punto de reanudación.
+- Lee el historial del chat y los comentarios previos antes de actuar, para tener todo el contexto de lo ya conversado y no repetir ni omitir nada.
+- Nunca edites un archivo sin leerlo primero y entender su estado actual.
+- Ejecuta una acción, observa el resultado real y adapta el siguiente paso (ciclo cerrado: actuar → observar → adaptar).
+- Si una solución falla, no la repitas indefinidamente: identifica la causa, busca alternativas y elige una prueba que las distinga.
+- Tras cada cambio sustancial ejecuta las pruebas, el linter y el type checker del proyecto.
+- Si no hay progreso en 3 iteraciones, detente y pregunta al usuario (detección de bucle sin salida).
+- No pidas al usuario que diga 'continue' entre fases exitosas; avanza hasta completar la entrega o hasta quedar bloqueado.
+- Explica qué cambiaste y por qué al finalizar cada fase y al completar la entrega.
+- Registra cada cambio autorizado en CHANGE_CONTROL.md (fila, fecha, alcance, estado authorized) y documenta en detalle antes de escribir código: qué, por qué, archivos, pasos, aceptación y verificación. Sin fila y sin documentación, no hay código.
+- Cierra una fase solo cuando: código implementado + pruebas de la fase pasan + PROJECT_MEMORY.md marca la fase [x] con las rutas tocadas.
 
 ### How to activate
 
-- **Loop mode:** Load / attach this `AGENTS.md` in your AI editor or chat (Cursor, Claude Code, OpenCode, Copilot, Windsurf, etc.), then paste the start prompt (see below or `LOOP_START_PROMPT.txt`).
+- **Loop mode:** Load / attach this `AGENTS.md` in your AI editor or chat (Cursor, Claude Code, OpenCode, Copilot, Windsurf, etc.). The loop rules and start prompt activate automatically — no manual copy-paste required.
 - **Prompt mode:** Work without loading this file — no loop behavior activates.
 - **Memory duo:** `AGENTS.md` = loop rules in-chat; `PROJECT_MEMORY.md` = durable portable handoff on disk. Use both.
 - **Change control:** `CHANGE_CONTROL.md` = local register of every change (row before code, docs before implementation).
-
-### Suggested start prompt (copy-paste)
-
-> Load AGENTS.md (loop mode). Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md (or the plan). Implement the project phase by phase until all phases are done. For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase. Change control: before implementing an authorized change, add its row to CHANGE_CONTROL.md and update the documentation in detail. Do not ask me to say continue between successful phases. Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop). If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.
 
 ### Autonomous phased delivery
 
@@ -164,8 +172,15 @@ Never modify the output format — consumers depend on it.
 
 ## Additional Instructions
 
-Universal agent config generator — auto-adapts to any project stack.
-Edit universal-agent.yaml to configure everything.
-Run `uagent generate` to regenerate.
-Load AGENTS.md in your agent to activate loop mode.
-Work without the file for normal prompt mode.
+Universal Loop Agent (ULA). Este AGENTS.md activa el modo loop autónomo y adaptativo al cargarse en el chat de cualquier editor de IA. No necesitas pegar ningún prompt adicional: al cargar AGENTS.md las reglas y el start prompt se inyectan automáticamente.
+
+1. Universal: funciona con cualquier modelo LLM y editor (OpenCode, Cursor, Copilot, Claude Code, Windsurf, Devin, Jules, Zed, Amp, Roo Code, Kilo Code, Cline, Gemini CLI, etc.). No requiere cuentas ni herramientas externas más allá de las del editor.
+2. Adaptativo: se adapta al proyecto que se esté implementando. Detecta el stack, la fase actual, qué está cerrado y qué está abierto, y ajusta la metodología al producto, no al conocimiento del agente.
+3. Plan en fases: implementa plan.md fase por fase, pero siempre verifica lo ya cerrado y si algún agente omitió algo.
+4. Cierre basado en evidencia: una fase cerrada requiere código, pruebas que pasen y PROJECT_MEMORY.md marcado. Si 2+ agentes coinciden en que lo implementado es funcional (no solo validado), se da por cerrado, sin omitirlo de revisión cuando el usuario lo pida o otro agente ejecute AGENTS.md.
+5. Calidad, rapidez, escalabilidad: investiga de forma autónoma la mejor metodología, lenguaje y framework antes de implementar.
+6. Investigación con autoría: marca qué modelo hizo la investigación; otro agente puede verificarla, dar el visto bueno o aportar retroalimentación con mejoras no propuestas.
+7. Preservación de contexto: los .bat nunca reemplazan archivos existentes solo porque sí. Al ejecutar init.bat, setup-all.bat o generate.bat, se comprueba si AGENTS.md, PROJECT_MEMORY.md, CHANGE_CONTROL.md, idea.md y plan.md ya existen; si existen, se actualizan solo si hace falta (contenido cambiado) y se conserva todo el contexto previo. Si no existen, se crean.
+8. Orquestación paralela: varios agentes trabajan en conjunto sabiendo qué hace el otro, coordinados por PROJECT_MEMORY.md (memoria permanente), sin archivos orquestador innecesarios.
+
+Edita universal-agent.yaml para configurar todo. Ejecuta `uagent generate` para regenerar AGENTS.md. Cárgalo en el chat para activar el modo loop.

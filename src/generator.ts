@@ -9,6 +9,7 @@ import {
   sectionChangeControl,
   sectionAgentLoop,
   sectionMultiAgent,
+  sectionAutonomousDelivery,
   sectionRules,
   sectionUniversal,
 } from "./sections/index.ts"
@@ -41,6 +42,7 @@ export function generate(source: SourceConfig): GeneratorOutput {
     sectionChangeControl(source),
     sectionAgentLoop(source),
     sectionMultiAgent(source),
+    sectionAutonomousDelivery(source),
     sectionRules(source),
     sectionUniversal(source),
   )

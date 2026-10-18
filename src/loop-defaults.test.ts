@@ -17,7 +17,7 @@ describe("loop-defaults", () => {
   test("activation copy mentions memory duo, start prompt, and phases", () => {
     const block = loopActivationLines().join("\n")
     expect(block).toContain("Memory duo")
-    expect(block).toContain("Suggested start prompt")
+    expect(block).toContain("activate automatically")
     expect(block).toContain("Autonomous phased delivery")
     expect(block).toContain("Definition of Done")
     expect(block).toContain("Tool vs product")
