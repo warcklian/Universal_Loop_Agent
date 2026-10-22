@@ -84,6 +84,10 @@ export interface ConflictConfig {
   file_locking?: boolean
   auto_detect?: boolean
   strategy?: "topological" | "sequential" | "worktree"
+  /** Lock / claim TTL in minutes. Default: 30. */
+  lock_ttl_minutes?: number
+  /** Relative path for lock files. Default: .uagent/locks */
+  locks_path?: string
 }
 
 export interface ResearchConfig {
@@ -149,6 +153,15 @@ export interface ChangeControlConfig {
   rules?: string[]
 }
 
+/** Toolkit-side options that affect upgrade / prune behaviour. */
+export interface ToolConfig {
+  /**
+   * Relative paths (files or directories) that upgrade must never rewrite.
+   * Example: frozen release trees or vendor snapshots.
+   */
+  exclude_paths?: string[]
+}
+
 export interface SourceConfig {
   project: ProjectConfig
   build?: BuildConfig
@@ -159,6 +172,7 @@ export interface SourceConfig {
   agent_loop?: AgentLoopConfig
   multi_agent?: MultiAgentConfig
   change_control?: ChangeControlConfig
+  tool?: ToolConfig
   rules?: ScopedRule[]
   universal_instructions?: string
   research?: ResearchConfig

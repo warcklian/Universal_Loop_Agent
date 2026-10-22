@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test"
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { buildUpgradePlan, discoverFiles, runUpgrade } from "./upgrade.ts"
+import {
+  buildUpgradePlan,
+  discoverFiles,
+  isToolkitRoot,
+  runUpgrade,
+} from "./upgrade.ts"
 
 function makeLegacyProject(tag: string): string {
   const root = join(tmpdir(), `uagent-upgrade-${tag}-${Date.now()}`)
@@ -101,7 +106,7 @@ describe("upgrade", () => {
       expect(notes).not.toContain("MEMORIA_PROYECTO.md")
 
       const memory = readFileSync(join(root, "PROJECT_MEMORY.md"), "utf-8")
-      expect(memory).not.toContain("MEMORIA_PROYECTO.md")
+      // Diary content is preserved (including historical name mentions when present)
       expect(memory).toContain("Indice.md")
 
       expect(existsSync(join(root, "AGENTS.md"))).toBe(true)
@@ -118,20 +123,92 @@ describe("upgrade", () => {
     }
   })
 
-  test("when both legacy and new exist, prune removes legacy", () => {
+  test("when both legacy and new exist, default upgrade keeps both (no prune)", () => {
     const root = makeLegacyProject("both")
+    writeFileSync(join(root, "PROJECT_MEMORY.md"), "# Already new\n", "utf-8")
+    try {
+      const { report, plan } = runUpgrade(root, {
+        dryRun: false,
+        yes: true,
+        prune: true, // without allowDeletes → ignored
+        batchSize: 50,
+      })
+      expect(existsSync(join(root, "MEMORIA_PROYECTO.md"))).toBe(true)
+      expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(true)
+      expect(report.applied.pruned.length).toBe(0)
+      expect(plan.warnings.some((w) => /prune ignored|POLICY/i.test(w))).toBe(true)
+      expect(report.verify.ok).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("prune only deletes when allowDeletes is explicit", () => {
+    const root = makeLegacyProject("both-allow")
     writeFileSync(join(root, "PROJECT_MEMORY.md"), "# Already new\n", "utf-8")
     try {
       const { report } = runUpgrade(root, {
         dryRun: false,
         yes: true,
         prune: true,
+        allowDeletes: true,
         batchSize: 50,
       })
       expect(existsSync(join(root, "MEMORIA_PROYECTO.md"))).toBe(false)
       expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(true)
       expect(report.applied.pruned.some((p) => p.includes("MEMORIA_PROYECTO.md"))).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("preserves .uagent host stamp markers across upgrade --prune", () => {
+    const root = makeLegacyProject("stamp")
+    const stampPath = join(root, ".uagent", "regla19.stamp")
+    const stampBody = "status=ok checked_at=2026-10-21\n"
+    writeFileSync(stampPath, stampBody, "utf-8")
+    try {
+      runUpgrade(root, { dryRun: false, yes: true, prune: true, batchSize: 50 })
+      expect(existsSync(stampPath)).toBe(true)
+      expect(readFileSync(stampPath, "utf-8")).toBe(stampBody)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("toolkit root is not auto-migrated", () => {
+    const root = join(tmpdir(), `uagent-toolkit-root-${Date.now()}`)
+    mkdirSync(join(root, "src"), { recursive: true })
+    writeFileSync(join(root, "setup-all.bat"), "@echo off\n", "utf-8")
+    writeFileSync(join(root, "src", "cli.ts"), "export {}\n", "utf-8")
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "uagent" }), "utf-8")
+    writeFileSync(join(root, "MEMORIA_PROYECTO.md"), "# keep\n", "utf-8")
+    try {
+      expect(isToolkitRoot(root)).toBe(true)
+      const { report, plan } = runUpgrade(root, { dryRun: false, yes: true, prune: true })
+      expect(plan.renames.length).toBe(0)
+      expect(existsSync(join(root, "MEMORIA_PROYECTO.md"))).toBe(true)
+      expect(existsSync(join(root, "PROJECT_MEMORY.md"))).toBe(false)
       expect(report.verify.ok).toBe(true)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps historical diary mentions on second upgrade", () => {
+    const root = makeLegacyProject("hist")
+    writeFileSync(
+      join(root, "MEMORIA_PROYECTO.md"),
+      "# Memoria\n\nMigrated from MEMORIA_PROYECTO.md on purpose.\nSee Indice.md\n",
+      "utf-8",
+    )
+    try {
+      runUpgrade(root, { dryRun: false, yes: true, prune: true, batchSize: 50 })
+      const memory = readFileSync(join(root, "PROJECT_MEMORY.md"), "utf-8")
+      expect(memory).toContain("MEMORIA_PROYECTO.md")
+      const second = runUpgrade(root, { dryRun: false, yes: true, prune: true, batchSize: 50 })
+      expect(readFileSync(join(root, "PROJECT_MEMORY.md"), "utf-8")).toContain("MEMORIA_PROYECTO.md")
+      expect(second.plan.warnings.some((w) => w.includes("kept historical mention"))).toBe(true)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

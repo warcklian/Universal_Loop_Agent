@@ -1,5 +1,85 @@
 # Universal_Loop_Agent — Master plan
 
+## Record — 2026-10-21 (Retire LOOP_START_PROMPT.txt)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Activation is load-AGENTS.md only; no separate start-prompt file |
+| **Goal** | Do not create `LOOP_START_PROMPT.txt`; remove it when regenerating `AGENTS.md`; adapters remain |
+| **Status** | Completed (CH-0006) |
+
+### Spec
+
+- **What / why:** CH-0004 already stated the loop activates on loading `AGENTS.md` with no paste. The leftover file and setup-all/write-prompt path contradicted that and could confuse consumers.
+- **Files:** `idea-template.ts` (remove helper), `cli.ts` generate + write-prompt, `loop-defaults.ts` activation copy, setup-all, docs/README/Index, tests, delete root `LOOP_START_PROMPT.txt`.
+- **Steps:**
+  1. Replace `writeStartPromptFile` with `removeObsoleteStartPromptFile` (unlink if present).
+  2. Call it from `generate` whenever `AGENTS.md` is written or already present/unchanged.
+  3. `write-prompt` CLI becomes a cleanup alias (removes the file; does not create).
+  4. setup-all: drop write-prompt step; UX = load AGENTS.md only.
+  5. Activation section: no “Suggested start prompt” / no LOOP_START_PROMPT references.
+- **Acceptance:** Fresh setup and re-generate leave no `LOOP_START_PROMPT.txt`; adapters still create-if-missing; suite green.
+- **Verify:** `bun test` · `bun run typecheck` · `uagent generate` on this repo.
+
+---
+
+## Record — 2026-10-21 (setup-all: preserve existing phases)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Safety when re-running setup-all on a product that already has a previous ULA |
+| **Goal** | Never delete or corrupt handoff: `plan-from` must not replace an existing `## Phases` checklist (including checked items) unless the user passes `--force` |
+| **Status** | Completed (CH-0005 verified) |
+
+### Spec
+
+- **What / why:** Re-running `setup-all` on a parent project that already has `PROJECT_MEMORY.md` with phases was rewriting `## Phases` from `idea.md` / `*_Plan.md`, wiping `[x]` progress and custom phase lists.
+- **Files:** `src/plan-from.ts`, `src/cli.ts`, `src/features.test.ts`, `docs/file-lifecycle.md`, setup-all footer copy, plan / CHANGE_CONTROL / PROJECT_MEMORY.
+- **Steps:**
+  1. Detect an existing phase checklist under `## Phases` (`- [ ]` / `- [x]` with text).
+  2. Default: skip write; leave memory unchanged; message explains how to force.
+  3. CLI `plan-from --force` (and `planFromIdea(..., { force: true })`) for explicit refresh.
+  4. setup-all continues to call plan-from **without** `--force`.
+- **Acceptance:** Existing checklist preserved on second plan-from; empty memory still gets phases from a filled idea; suite + typecheck green.
+- **Verify:** `bun test` (plan-from cases) · `bun run typecheck`.
+
+---
+
+## Record — 2026-10-21 (Multi-agent locks + claims)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Hybrid coordination: `.uagent/locks` TTL + Active claims in PROJECT_MEMORY |
+| **Goal** | Several agents, same prompt; free phases only; no marking another's live phase done |
+| **Status** | Completed |
+
+### Delivered
+
+- `src/coordination.ts` + `coord:*` CLI + tests
+- Mandatory coord rules in `MANDATED_RULES` / AGENTS Multi-Agent section
+- Docs `docs/multi-agent-coordination.md`; locks gitignored; claims versioned in memory
+- Default TTL 30 minutes with heartbeat
+
+---
+
+## Record — 2026-10-21 (File lifecycle: never prune / never delete)
+
+| Field | Value |
+|-------|--------|
+| **Topic** | Permanent create / update / rename policy; stop regressing `--prune` deletes |
+| **Goal** | Document and enforce: missing→create, exists→update features, legacy name→rename only; never auto-delete |
+| **Status** | Completed |
+
+### Delivered
+
+- `docs/file-lifecycle.md` as the canon policy
+- README + `PROJECT_MEMORY.md` permanent policies + setup-all footer
+- `--prune` deprecated: ignored unless `--i-accept-deletes`
+- `setup-all` never passes `--prune`
+- Tests: default keeps both names; deletes only with explicit `allowDeletes`
+
+---
+
 ## Record — 2026-10-13 (BOM-tolerant file readers)
 
 | Field | Value |

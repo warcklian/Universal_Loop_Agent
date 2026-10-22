@@ -99,7 +99,7 @@ This section defines how the agent loop behaves. Load this file to activate loop
 
 ### How to activate
 
-- **Loop mode:** Load / attach this `AGENTS.md` in your AI editor or chat (Cursor, Claude Code, OpenCode, Copilot, Windsurf, etc.). The loop rules and start prompt activate automatically — no manual copy-paste required.
+- **Loop mode:** Load / attach this `AGENTS.md` in your AI editor or chat (Cursor, Claude Code, OpenCode, Copilot, Windsurf, etc.). That alone activates the loop — no extra prompt to paste.
 - **Prompt mode:** Work without loading this file — no loop behavior activates.
 - **Memory duo:** `AGENTS.md` = loop rules in-chat; `PROJECT_MEMORY.md` = durable portable handoff on disk. Use both.
 - **Change control:** `CHANGE_CONTROL.md` = local register of every change (row before code, docs before implementation).
@@ -113,11 +113,32 @@ This section defines how the agent loop behaves. Load this file to activate loop
 5. **Resume:** if the chat restarted, continue from the first unchecked phase — do not redo completed ones.
 6. Stop only when the plan is complete, or when blocked (secrets / irreversible / ambiguity / doom-loop).
 7. Do **not** ask the user to say "continue" between successful phases.
+8. Batch blocker questions once, upfront; then continue autonomously.
+9. Report once at the end, or when genuinely blocked — not between phases.
+10. Do not push, create remotes or rewrite published history without an explicit request.
 
 ### Tool vs product
 
-- **Product (belongs in the project):** `PROJECT_MEMORY.md`, `AGENTS.md`, `universal-agent.yaml`, `.uagent/memory/`, optional `idea.md` / `LOOP_START_PROMPT.txt`.
+- **Product (belongs in the project):** `PROJECT_MEMORY.md`, `AGENTS.md`, `universal-agent.yaml`, `.uagent/memory/`, optional `idea.md`.
 - **Toolkit (optional helper, not product code):** any nested generator folder used only to create/update those files. Never treat it as an application module.
+
+### Autonomous delivery contract
+
+- Read the canonical memory first; resume from the first unchecked phase, never redo finished phases
+- Derive ordered phases and implement them one at a time without waiting for the user to say continue
+- Each phase is done only when code is in place, checks pass and the phase checkbox is marked
+- Run the project's configured tests and checks after every substantive change
+- Batch every blocker question into one upfront request for values only the user can provide, such as credentials, IPs, ports or external accounts, then continue autonomously
+- Never stop to report progress between phases; report once at the end, or when genuinely blocked
+- Do not push, create remotes or rewrite published history without an explicit request
+- Before editing code or starting a phase: run uagent coord:register, claim the phase in PROJECT_MEMORY.md Active claims, and lock the files with uagent coord:lock
+- Never mark a phase [x] that another agent holds with a live claim or lock
+- Never edit files under another agent's live lock; run uagent coord:cleanup for stale TTL first, then take a free phase
+- While working, run uagent coord:heartbeat periodically; on finish or stop, unlock files and clear your phase claim
+
+### Portable canon vs host editor rules
+
+The files `AGENTS.md` + canonical memory (+ `universal-agent.yaml`) are the portable contract. Optional host-editor profile rules may only ensure this toolkit/canon exists; they must not create a second handoff or override loop/memory rules here. Agents without host profile rules follow only this canon. Host editor rules must not fork canonical memory.
 
 ## Multi-Agent Coordination
 
@@ -139,9 +160,43 @@ Each agent is responsible for specific file domains. Do not edit files outside y
 
 ### Conflict Prevention
 
-- **File locking:** enabled — lock files before editing
-- **Auto-detect collisions:** enabled — warn on concurrent edits
+- **File locking:** **mandatory** — `uagent coord:lock` before editing (`.uagent/locks/`, TTL 30 min)
+- **Phase claims:** **mandatory** — claim the phase in `PROJECT_MEMORY.md` → Active claims before implementing
+- **Same prompt OK:** every agent loads AGENTS.md, takes the first free phase, and must not mark another agent's live phase `[x]`
+- **Auto-detect collisions:** enabled — run `uagent coord:conflicts` before edit
 - **Merge strategy:** topological
+
+### Required coord commands
+
+1. `uagent coord:register . -n "<name>" -i "<ide>"` → keep `agentId`
+2. `uagent coord:cleanup .` (drop stale locks/claims past TTL)
+3. `uagent coord:claim . --agent-id <id> --phase "<phase title>" --files <paths>`
+4. `uagent coord:lock . --agent-id <id> --files <paths> --phase "<phase>"`
+5. Heartbeat while working: `uagent coord:heartbeat . --agent-id <id>`
+6. On done/stop: unlock + `uagent coord:claim:release` (or unregister)
+
+## Autonomous Adaptive Delivery (ULA)
+
+This project is driven by an autonomous, adaptive loop agent. Load `AGENTS.md` in any AI editor (OpenCode, Cursor, Copilot, Claude Code, Windsurf, etc.) to activate it.
+
+### 4. Parallel multi-agent orchestration (PERMANENT MEMORY AS COORDINATOR)
+
+- Use `PROJECT_MEMORY.md` as the permanent memory and as the multi-agent coordinator; do not create unnecessary orchestrator files.
+- Each agent reads the memory before starting, so every agent knows what the others are doing: independent work, together, without getting in each other's way.
+- Each agent owns specific file domains (Ownership Matrix) and does not edit outside its domain.
+- File locking, auto-detect of collisions and topological merge strategy are enabled.
+- Shared memory: `PROJECT_MEMORY.md`.
+
+### Loop rules (operating cycle)
+
+- Read files before editing them.
+- Act → observe the real result → adapt the next step (closed execution cycle).
+- If a solution fails, do not repeat it indefinitely: identify the cause, propose alternatives, and choose a test that distinguishes them.
+- After every substantive change run the project tests, linter and type checker.
+- Register every authorized change in `CHANGE_CONTROL.md` (row, date, scope, status `authorized`) and document in detail before writing code: what, why, files, steps, acceptance and verification. No row and no docs, no code.
+- Close a phase only when code + checks pass + `PROJECT_MEMORY.md` marks it `[x]` with paths touched.
+- If there is no progress in 3 iterations, stop and ask the user (doom-loop detection). Never ask the user to say "continue" between successful phases.
+- Explain what changed and why at phase boundaries and at final completion.
 
 ## Project-Specific Rules
 

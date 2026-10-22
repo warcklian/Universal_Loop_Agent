@@ -189,7 +189,7 @@ Every project gets a local change register at its root. The generated loop turns
 | **2. Document** | Before implementing, the docs are updated **in detail** so any agent with only the repository can develop it: what and why, files affected, exact steps, acceptance criteria, how to verify. |
 | **3. Close** | The row moves to `implemented` → `verified` only when code, checks and docs agree; files touched and verification evidence are recorded. |
 
-The register is created by `uagent init` (never overwritten), checked by `uagent doctor`, and referenced from the generated `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` and `LOOP_START_PROMPT.txt`. Rename it with `change_control.file`; disable it with `change_control.enabled: false`.
+The register is created by `uagent init` (never overwritten), checked by `uagent doctor`, and referenced from the generated `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`. Rename it with `change_control.file`; disable it with `change_control.enabled: false`.
 
 **Full docs/scripts sync (multi-agent):** the generated loop includes a rule to sync the **whole** documentation/scripts canon after each substantive delivery (not only files from the latest feature). Edit the rule in the project's `universal-agent.yaml`, then run `generate.bat` / `generate.ps1` from this folder so `AGENTS.md` stays portable across machines and AI editors.
 
@@ -216,20 +216,89 @@ The register is created by `uagent init` (never overwritten), checked by `uagent
 
 ## CLI commands
 
+| Command | Purpose |
+|---------|---------|
+| `init` | Detect stack; write YAML + canonical memory + stubs (never overwrite memory with substance) |
+| `detect` | Print detected stack without writing |
+| `generate` | Generate `AGENTS.md` (`--force`, `--adapters`, `--dry-run`, `--init-memory`) |
+| `validate` | Parse `universal-agent.yaml` |
+| `upgrade` | Migrate legacy names/refs (`--dry-run`, `--yes`; **never use `--prune` in normal flows**) |
+| `update` | Self-update this toolkit from origin (fast-forward only) |
+| `sync` | Write multi-editor adapters pointing at `AGENTS.md` |
+| `adopt` | Import existing editor instructions into YAML |
+| `plan-from` | Idea/plan → phases in canonical memory |
+| `doctor` | Readiness score for loop + memory + change control |
+| `verify` | Self-check: docs/scripts vs registered CLI (exit 1 if inconsistent) |
+| `reconcile` | Write `.uagent/AGENTS_RECONCILE.md` when `AGENTS.md` is stale |
+| `ensure-idea` | Create `idea.md` from template when missing |
+| `write-prompt` | Remove obsolete `LOOP_START_PROMPT.txt` (load `AGENTS.md` is enough) |
+| `coord:register` | Register agent session → `agentId` |
+| `coord:unregister` | Unregister and release locks/claims |
+| `coord:heartbeat` | Renew lock/claim TTL (default 30 min) |
+| `coord:lock` | Acquire file locks under `.uagent/locks/` |
+| `coord:unlock` | Release locks |
+| `coord:locks` | List locks |
+| `coord:conflicts` | Detect live foreign locks |
+| `coord:cleanup` | Drop stale locks/claims past TTL |
+| `coord:claim` | Claim a phase in `PROJECT_MEMORY.md` Active claims |
+| `coord:claim:release` | Release a phase claim |
+
 ```bash
-# Generate AGENTS.md
-uagent generate
-
-# Validate universal-agent.yaml
+uagent generate --adapters
 uagent validate
-
-# Check origin for a newer version of the toolkit (and update it)
-uagent update
-uagent update --check      # report only, never writes
-
-# Preview without writing
-uagent generate --dry-run
+uagent update --check
+uagent verify .
+uagent reconcile ..
+uagent upgrade .. --dry-run
+uagent coord:register . -n "Alice" -i cursor
+uagent coord:cleanup .
 ```
+
+### Multi-agent (locks + claims)
+
+See [docs/multi-agent-coordination.md](docs/multi-agent-coordination.md).
+
+- State lives in the **product** folder (portable). Locks are gitignored; claims live in versioned memory.
+- `AGENTS.md` makes register → claim → lock **mandatory** before editing a phase.
+- Same `AGENTS.md` for every agent: take the first free phase; never mark another agent's live phase `[x]`.
+
+`setup-all` runs `verify` first (FAIL aborts), then init → upgrade → idea → plan-from → generate → `reconcile` (WARN continues) → doctor. It also keeps the toolkit `update` check.
+
+### Canonical memory
+
+`multi_agent.memory.canonical_file` is authoritative (default `PROJECT_MEMORY.md`). Doctor, init, upgrade, and generated `AGENTS.md` honour that name. The toolkit does not rename or prune the canonical file without an explicit `upgrade` migration.
+
+### File lifecycle (create / update / rename — never delete)
+
+**Canon policy** — see [docs/file-lifecycle.md](docs/file-lifecycle.md). Do not regress this:
+
+1. **Missing** → create (seed / template / generate).
+2. **Already exists** → update derived files with new features, or leave user handoff untouched.
+3. **Legacy name** → **rename only**. Never delete the old file automatically.
+4. **Both names exist** → keep both; rewrite refs to the new name; merge by hand if needed.
+
+**Do not use `--prune`.** It has caused loss of important files before. `setup-all` never passes `--prune`. The flag is ignored unless you also pass `--i-accept-deletes` (emergency only). Prefer deleting a leftover legacy file yourself after you confirm the new name has the content.
+
+### Upgrade safety
+
+- Never auto-migrates the toolkit root itself.
+- Skips nested toolkit folders, `tool.exclude_paths`, and frozen release/archive directories.
+- Does not rewrite historical mentions inside diary files (e.g. old names quoted in `PROJECT_MEMORY.md`).
+- Host markers (`.uagent/*.stamp`) are never deleted or rewritten.
+
+### Verify + reconcile
+
+- `uagent verify .` — docs/scripts must match `src/commands.ts` and `cli.ts`.
+- `uagent reconcile ..` — compares `AGENTS.md` to the mandated autonomy contract; writes a brief for the AI under `.uagent/AGENTS_RECONCILE.md`.
+
+## Host editor rules vs portable canon
+
+See [docs/coexistence-host-editors.md](docs/coexistence-host-editors.md).
+
+- `uagent` writes the canon in the **product** root (`..` from setup-all).
+- That canon (`AGENTS.md` + canonical memory + YAML) is the only multi-editor coordination.
+- Optional host-editor profile rules may ensure the toolkit/canon exists; they must not create a second handoff or override loop/memory rules.
+- Host-only markers such as `.uagent/*.stamp` are ignored by uagent and never deleted by upgrade.
 
 ## Toolkit self-update
 

@@ -13,6 +13,7 @@ import type {
   AgentLoopConfig,
   MultiAgentConfig,
   ChangeControlConfig,
+  ToolConfig,
   ScopedRule,
 } from "./schema.ts"
 
@@ -171,10 +172,22 @@ function validateMultiAgent(raw: Record<string, unknown> | undefined): MultiAgen
         file_locking: bool(conflictRaw["file_locking"]),
         auto_detect: bool(conflictRaw["auto_detect"]),
         strategy: (str(conflictRaw["strategy"]) as MultiAgentConfig["conflict"] extends { strategy?: infer S } ? S : never) ?? undefined,
+        lock_ttl_minutes: num(conflictRaw["lock_ttl_minutes"]),
+        locks_path: str(conflictRaw["locks_path"]),
       }
     : undefined
 
-  return { enabled: bool(raw["enabled"]), memory, ownership, conflict }
+  const orchRaw = obj(raw["orchestration"])
+  const orchestration = orchRaw
+    ? {
+        parallel: bool(orchRaw["parallel"]),
+        shared_memory: str(orchRaw["shared_memory"]),
+        avoid_new_files: bool(orchRaw["avoid_new_files"]),
+        agents_share_state: bool(orchRaw["agents_share_state"]),
+      }
+    : undefined
+
+  return { enabled: bool(raw["enabled"]), memory, ownership, conflict, orchestration }
 }
 
 function validateChangeControl(raw: Record<string, unknown> | undefined): ChangeControlConfig | undefined {
@@ -184,6 +197,13 @@ function validateChangeControl(raw: Record<string, unknown> | undefined): Change
     file: str(raw["file"]),
     id_prefix: str(raw["id_prefix"]),
     rules: arr(raw["rules"]),
+  }
+}
+
+function validateTool(raw: Record<string, unknown> | undefined): ToolConfig | undefined {
+  if (!raw) return undefined
+  return {
+    exclude_paths: arr(raw["exclude_paths"]),
   }
 }
 
@@ -231,6 +251,7 @@ export function parseSource(filePath: string): SourceConfig {
     agent_loop: validateAgentLoop(obj(doc["agent_loop"])),
     multi_agent: validateMultiAgent(obj(doc["multi_agent"])),
     change_control: validateChangeControl(obj(doc["change_control"])),
+    tool: validateTool(obj(doc["tool"])),
     rules: validateRules(doc["rules"] as unknown[] | undefined),
     universal_instructions: str(doc["universal_instructions"]),
   }

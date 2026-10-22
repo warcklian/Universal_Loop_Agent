@@ -4,7 +4,10 @@ import type { DetectedProject } from "./detector.ts"
 import { ensureChangeControlRegister } from "./change-control.ts"
 import { readJsonFile } from "./fs-util.ts"
 
-/** Canonical portable handoff at project root (survives folder/machine moves). */
+/**
+ * Canonical portable handoff at project root (survives folder/machine moves).
+ * Host-editor stamps under .uagent/*.stamp are out of scope for init/memory.
+ */
 export const CANONICAL_MEMORY_FILE = "PROJECT_MEMORY.md"
 
 /** Legacy Spanish name — migrated to CANONICAL_MEMORY_FILE on init/upgrade. */
@@ -166,6 +169,8 @@ export function initMemory(targetDir: string, project: DetectedProject): void {
   }
 
   const files = getMemoryFiles(project)
+  let created = 0
+  let skipped = 0
   for (const file of files) {
     const filePath = join(memoryDir, file.path)
     const parts = file.path.split("/")
@@ -173,10 +178,18 @@ export function initMemory(targetDir: string, project: DetectedProject): void {
       const dir = join(memoryDir, ...parts.slice(0, -1))
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
     }
+    // Never overwrite existing stubs — they are pointers the project may customize
+    if (existsSync(filePath)) {
+      skipped++
+      continue
+    }
     writeFileSync(filePath, file.content, "utf-8")
+    created++
   }
 
-  console.log(`  Created .uagent/memory/ stubs → ${CANONICAL_MEMORY_FILE} (${files.length} files)`)
+  console.log(
+    `  .uagent/memory/ stubs → ${CANONICAL_MEMORY_FILE} (created ${created}, kept ${skipped})`,
+  )
 }
 
 export function ensureMemory(targetDir: string, project: DetectedProject): void {

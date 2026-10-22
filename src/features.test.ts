@@ -8,7 +8,11 @@ import { planFromIdea, upsertPhasesSection } from "./plan-from.ts"
 import { runDoctor } from "./doctor.ts"
 import { generate } from "./generator.ts"
 import { parseSource } from "./parser.ts"
-import { ensureIdeaFile, loopStartPrompt, writeStartPromptFile } from "./idea-template.ts"
+import {
+  ensureIdeaFile,
+  OBSOLETE_START_PROMPT_FILE,
+  removeObsoleteStartPromptFile,
+} from "./idea-template.ts"
 import { ensureCanonicalMemory, CANONICAL_MEMORY_FILE } from "./memory.ts"
 import { detectProject } from "./detector.ts"
 import { runUpgrade } from "./upgrade.ts"
@@ -20,7 +24,7 @@ function tmpRoot(tag: string): string {
 }
 
 describe("idea template", () => {
-  test("creates idea.md once and writes start prompt", () => {
+  test("creates idea.md once and never recreates LOOP_START_PROMPT", () => {
     const root = tmpRoot("idea")
     try {
       const first = ensureIdeaFile(root)
@@ -28,9 +32,19 @@ describe("idea template", () => {
       expect(existsSync(join(root, "idea.md"))).toBe(true)
       const second = ensureIdeaFile(root)
       expect(second.created).toBe(false)
-      const promptPath = writeStartPromptFile(root)
-      expect(existsSync(promptPath)).toBe(true)
-      expect(loopStartPrompt()).toContain("phase by phase")
+      expect(existsSync(join(root, OBSOLETE_START_PROMPT_FILE))).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("removeObsoleteStartPromptFile deletes leftover LOOP_START_PROMPT.txt", () => {
+    const root = tmpRoot("drop-prompt")
+    try {
+      writeFileSync(join(root, OBSOLETE_START_PROMPT_FILE), "legacy paste\n", "utf-8")
+      expect(removeObsoleteStartPromptFile(root)).toBe(true)
+      expect(existsSync(join(root, OBSOLETE_START_PROMPT_FILE))).toBe(false)
+      expect(removeObsoleteStartPromptFile(root)).toBe(false)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -128,6 +142,62 @@ describe("plan-from", () => {
       expect(result.skipped).toBe(true)
       expect(result.phases).toEqual([])
       expect(readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")).toBe(before)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("does not wipe existing ## Phases checklist on re-run (setup-all safety)", () => {
+    const root = tmpRoot("plan-preserve")
+    try {
+      writeFileSync(
+        join(root, "idea.md"),
+        ["# App", "", "## Auth", "Login", "", "## API", "REST"].join("\n"),
+        "utf-8",
+      )
+      writeFileSync(join(root, "package.json"), JSON.stringify({ name: "preserve-phases" }), "utf-8")
+      const before = [
+        "# Project memory",
+        "",
+        "## Phases",
+        "",
+        "- [x] Already done work",
+        "- [ ] Still open",
+        "",
+        "## Open items",
+        "",
+        "Keep this note",
+        "",
+      ].join("\n")
+      writeFileSync(join(root, CANONICAL_MEMORY_FILE), before, "utf-8")
+      const result = planFromIdea(root, "idea.md")
+      expect(result.skipped).toBe(true)
+      expect(result.message).toMatch(/already has a ## Phases checklist/i)
+      expect(readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")).toBe(before)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("plan-from --force replaces existing ## Phases when asked", () => {
+    const root = tmpRoot("plan-force")
+    try {
+      writeFileSync(
+        join(root, "idea.md"),
+        ["# App", "", "## Auth", "Login", "", "## API", "REST"].join("\n"),
+        "utf-8",
+      )
+      writeFileSync(join(root, "package.json"), JSON.stringify({ name: "force-phases" }), "utf-8")
+      writeFileSync(
+        join(root, CANONICAL_MEMORY_FILE),
+        "# Project memory\n\n## Phases\n\n- [x] Old done\n",
+        "utf-8",
+      )
+      const result = planFromIdea(root, "idea.md", { force: true })
+      expect(result.skipped).toBe(false)
+      const mem = readFileSync(join(root, CANONICAL_MEMORY_FILE), "utf-8")
+      expect(mem).toContain("Auth")
+      expect(mem).not.toContain("Old done")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -297,11 +367,8 @@ describe("doctor + frontmatter", () => {
         ].join("\n"),
         "utf-8",
       )
-      writeFileSync(
-        join(root, "AGENTS.md"),
-        "---\ndescription: \"x\"\n---\n\n## Agent Loop\n\n### Autonomous phased delivery\n\n",
-        "utf-8",
-      )
+      const cfg = parseSource(join(root, "universal-agent.yaml"))
+      writeFileSync(join(root, "AGENTS.md"), generate(cfg).content, "utf-8")
       writeFileSync(join(root, "PROJECT_MEMORY.md"), "# Mem\n\n## Phases\n\n- [ ] A\n", "utf-8")
       writeFileSync(join(root, "CHANGE_CONTROL.md"), "# Register\n\n| ID | Fecha | Alcance |\n", "utf-8")
       writeFileSync(join(root, "idea.md"), "# Idea\n\n## Goal\n\nBuild it\n", "utf-8")

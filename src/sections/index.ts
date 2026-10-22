@@ -195,9 +195,24 @@ export function sectionMultiAgent(s: SourceConfig): string | null {
     lines.push("")
     lines.push("### Conflict Prevention")
     lines.push("")
-    if (ma.conflict.file_locking) lines.push(bullet("**File locking:** enabled — lock files before editing"))
-    if (ma.conflict.auto_detect) lines.push(bullet("**Auto-detect collisions:** enabled — warn on concurrent edits"))
+    if (ma.conflict.file_locking !== false) {
+      const ttl = ma.conflict.lock_ttl_minutes ?? 30
+      const locksPath = ma.conflict.locks_path || ".uagent/locks"
+      lines.push(bullet(`**File locking:** **mandatory** — \`uagent coord:lock\` before editing (\`${locksPath}/\`, TTL ${ttl} min)`))
+      lines.push(bullet("**Phase claims:** **mandatory** — claim the phase in `PROJECT_MEMORY.md` → Active claims before implementing"))
+      lines.push(bullet("**Same prompt OK:** every agent loads AGENTS.md, takes the first free phase, and must not mark another agent's live phase `[x]`"))
+    }
+    if (ma.conflict.auto_detect) lines.push(bullet("**Auto-detect collisions:** enabled — run `uagent coord:conflicts` before edit"))
     if (ma.conflict.strategy) lines.push(bullet(`**Merge strategy:** ${ma.conflict.strategy}`))
+    lines.push("")
+    lines.push("### Required coord commands")
+    lines.push("")
+    lines.push("1. `uagent coord:register . -n \"<name>\" -i \"<ide>\"` → keep `agentId`")
+    lines.push("2. `uagent coord:cleanup .` (drop stale locks/claims past TTL)")
+    lines.push("3. `uagent coord:claim . --agent-id <id> --phase \"<phase title>\" --files <paths>`")
+    lines.push("4. `uagent coord:lock . --agent-id <id> --files <paths> --phase \"<phase>\"`")
+    lines.push("5. Heartbeat while working: `uagent coord:heartbeat . --agent-id <id>`")
+    lines.push("6. On done/stop: unlock + `uagent coord:claim:release` (or unregister)")
   }
 
   return lines.join("\n")

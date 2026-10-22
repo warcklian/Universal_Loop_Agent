@@ -73,6 +73,14 @@ interface YamlConfig {
       file_locking: boolean
       auto_detect: boolean
       strategy: string
+      lock_ttl_minutes?: number
+      locks_path?: string
+    }
+    orchestration?: {
+      parallel?: boolean
+      shared_memory?: string
+      avoid_new_files?: boolean
+      agents_share_state?: boolean
     }
   }
   universal_instructions: string
@@ -190,6 +198,14 @@ export function generateYaml(project: DetectedProject): YamlConfig {
         file_locking: true,
         auto_detect: true,
         strategy: "topological",
+        lock_ttl_minutes: 30,
+        locks_path: ".uagent/locks",
+      },
+      orchestration: {
+        parallel: true,
+        shared_memory: CANONICAL_MEMORY_FILE,
+        avoid_new_files: true,
+        agents_share_state: true,
       },
     },
     universal_instructions: [

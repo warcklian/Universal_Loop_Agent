@@ -38,4 +38,7 @@ AGENTS.md
 
 # multi-agent memory / local uagent artifacts (not shared via git)
 .uagent/memory/
+.uagent/locks/
+.uagent/agents.json
 .uagent/upgrade-report.json
+.uagent/AGENTS_RECONCILE.md

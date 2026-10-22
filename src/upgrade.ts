@@ -7,12 +7,16 @@ import {
   statSync,
   unlinkSync,
   writeFileSync,
+  copyFileSync,
 } from "node:fs"
 import { basename, dirname, join, relative, resolve } from "node:path"
 import { detectProject } from "./detector.ts"
-import { ensureMemory } from "./memory.ts"
+import { ensureMemory, CANONICAL_MEMORY_FILE, LEGACY_CANONICAL_MEMORY_FILE } from "./memory.ts"
 import { generate } from "./generator.ts"
 import { parseSource } from "./parser.ts"
+import { readTextFile } from "./fs-util.ts"
+import { CHANGE_CONTROL_FILE } from "./change-control.ts"
+import { removeObsoleteStartPromptFile } from "./idea-template.ts"
 
 /** Known renames from older uagent versions → current English defaults. */
 export interface FileRenameMigration {
@@ -33,6 +37,63 @@ export interface TokenMigration {
 }
 
 export type Migration = FileRenameMigration | TokenMigration
+
+/** Diary files where historical mentions of legacy names must be kept. */
+const CONTENT_SENSITIVE_DIARIES = new Set([
+  CANONICAL_MEMORY_FILE,
+  LEGACY_CANONICAL_MEMORY_FILE,
+  CHANGE_CONTROL_FILE,
+  "CONTROL_CAMBIOS.md",
+])
+
+/** Directory names that look like frozen release / archive payloads. */
+export const DEFAULT_EXCLUDED_DIR_NAMES = new Set([
+  "releases",
+  "release",
+  "archives",
+  "archive",
+  "_archive",
+  "backups",
+  "backup",
+  "snapshots",
+  "mnt",
+  "storage",
+])
+
+/** Host-editor markers under .uagent/ — never delete or rewrite. */
+export function isHostMarkerName(name: string): boolean {
+  return /\.stamp$/i.test(name) || name.toLowerCase() === "regla19.stamp"
+}
+
+export function isFrozenPayloadDir(name: string): boolean {
+  if (DEFAULT_EXCLUDED_DIR_NAMES.has(name.toLowerCase())) return true
+  return /(\d{4}-\d{2}-\d{2})|(_v\d+\.\d+)|(-\d{4}-\d{2}-\d{2})/.test(name)
+}
+
+/** True when `root` is the uagent toolkit itself (do not auto-migrate). */
+export function isToolkitRoot(root: string): boolean {
+  const hasEntry = existsSync(join(root, "setup-all.bat")) || existsSync(join(root, "setup-all.ps1"))
+  const hasCli = existsSync(join(root, "src", "cli.ts"))
+  if (!hasEntry || !hasCli) return false
+  const pkgPath = join(root, "package.json")
+  if (!existsSync(pkgPath)) return true
+  try {
+    const raw = readTextFile(pkgPath) ?? readFileSync(pkgPath, "utf-8")
+    return /"name"\s*:\s*"uagent"/i.test(raw)
+  } catch {
+    return true
+  }
+}
+
+function hasSubstance(text: string): boolean {
+  const trimmed = text.replace(/\r\n/g, "\n").trim()
+  if (trimmed.length < 40) return false
+  // Seed/placeholder heuristics
+  if (/_List what is open/i.test(trimmed) && /_After each substantive delivery/i.test(trimmed)) {
+    return trimmed.length > 600
+  }
+  return trimmed.length >= 80
+}
 
 export const MIGRATIONS: Migration[] = [
   {
@@ -208,10 +269,24 @@ export interface UpgradePlan {
 export interface UpgradeOptions {
   dryRun?: boolean
   yes?: boolean
+  /**
+   * @deprecated Prefer rename-only migrations. Deletes are off unless `allowDeletes` is true.
+   * See docs/file-lifecycle.md — create / update / rename; never delete.
+   */
   prune?: boolean
+  /**
+   * Required together with `prune` to actually unlink legacy files.
+   * Without this flag, prune requests are ignored and a warning is recorded.
+   */
+  allowDeletes?: boolean
   batchSize?: number
   regenerateAgents?: boolean
   skipMemorySync?: boolean
+}
+
+/** Effective prune: only when both prune and allowDeletes are set. */
+export function effectivePrune(opts: UpgradeOptions): boolean {
+  return Boolean(opts.prune && opts.allowDeletes)
 }
 
 export interface UpgradeReport {
@@ -236,9 +311,21 @@ export interface UpgradeReport {
   }
 }
 
-function shouldSkipDir(name: string, fullPath: string): boolean {
+function shouldSkipDir(
+  name: string,
+  fullPath: string,
+  excludePaths: Set<string>,
+  root: string,
+): boolean {
   if (SKIP_DIR_NAMES.has(name)) return true
-  return isNestedToolkitDir(fullPath, name)
+  if (isFrozenPayloadDir(name)) return true
+  if (isNestedToolkitDir(fullPath, name)) return true
+  const rel = relative(root, fullPath).replace(/\\/g, "/")
+  if (excludePaths.has(rel) || excludePaths.has(name)) return true
+  for (const ex of excludePaths) {
+    if (rel === ex || rel.startsWith(ex.replace(/\/?$/, "/") )) return true
+  }
+  return false
 }
 
 /** Nested copy of this toolkit must never be rewritten by consumer upgrade. */
@@ -253,13 +340,40 @@ export function isNestedToolkitDir(dirPath: string, name: string): boolean {
     if (!hasEntry || !hasCli) return false
     const pkgPath = join(dirPath, "package.json")
     if (existsSync(pkgPath)) {
-      const raw = readFileSync(pkgPath, "utf-8")
+      const raw = readTextFile(pkgPath) ?? readFileSync(pkgPath, "utf-8")
       if (/"name"\s*:\s*"uagent"/i.test(raw)) return true
     }
     return true
   } catch {
     return false
   }
+}
+
+function loadExcludePaths(root: string): Set<string> {
+  const out = new Set<string>()
+  const yamlPath = join(root, "universal-agent.yaml")
+  if (!existsSync(yamlPath)) return out
+  try {
+    const cfg = parseSource(yamlPath)
+    for (const p of cfg.tool?.exclude_paths ?? []) {
+      out.add(p.replace(/\\/g, "/").replace(/^\.\//, ""))
+    }
+  } catch {
+    /* ignore */
+  }
+  return out
+}
+
+function isExcludedRel(rel: string, excludePaths: Set<string>): boolean {
+  const n = rel.replace(/\\/g, "/")
+  if (excludePaths.has(n)) return true
+  for (const ex of excludePaths) {
+    const prefix = ex.replace(/\/?$/, "/")
+    if (n.startsWith(prefix) || n === ex) return true
+  }
+  // Never rewrite host stamps
+  if (n.startsWith(".uagent/") && isHostMarkerName(basename(n))) return true
+  return false
 }
 
 function isProbablyTextFile(filePath: string): boolean {
@@ -274,8 +388,10 @@ function isProbablyTextFile(filePath: string): boolean {
 
 function isCriticalRefPath(rel: string): boolean {
   const n = rel.replace(/\\/g, "/")
+  const base = basename(n)
+  // Diaries keep historical mentions on purpose — not critical leftovers
+  if (CONTENT_SENSITIVE_DIARIES.has(base)) return false
   if (n === "universal-agent.yaml" || n === "AGENTS.md" || n === ".cursorrules") return true
-  if (n === "PROJECT_MEMORY.md" || n === "MEMORIA_PROYECTO.md") return true
   if (n.startsWith(".uagent/memory/")) return true
   return false
 }
@@ -287,7 +403,9 @@ function isCriticalRefPath(rel: string): boolean {
 export function discoverFiles(
   root: string,
   batchSize = 200,
+  excludePaths?: Set<string>,
 ): { allFiles: string[]; textFiles: string[]; batches: number } {
+  const excludes = excludePaths ?? loadExcludePaths(root)
   const allFiles: string[] = []
   const textFiles: string[] = []
   const stack: string[] = [root]
@@ -314,7 +432,7 @@ export function discoverFiles(
       }
 
       if (st.isDirectory()) {
-        if (shouldSkipDir(name, full)) continue
+        if (shouldSkipDir(name, full, excludes, root)) continue
         // Do not descend into .uagent here; memory stubs are scanned below
         if (name === ".uagent") continue
         stack.push(full)
@@ -417,22 +535,93 @@ export function scanTokenReferences(
 export function buildUpgradePlan(root: string, opts: UpgradeOptions = {}): UpgradePlan {
   const batchSize = opts.batchSize ?? 200
   const resolved = resolve(root)
-  const { allFiles, textFiles } = discoverFiles(resolved, batchSize)
   const warnings: string[] = []
   const renames: RenameAction[] = []
   const refHits: RefHit[] = []
   const tokens: Array<{ from: string; to: string }> = []
   const seenToken = new Set<string>()
 
+  if (isToolkitRoot(resolved)) {
+    warnings.push(
+      "This is the uagent toolkit itself - it keeps legacy names by design (migration table lives here)",
+    )
+    return {
+      root: resolved,
+      phases: ["discover", "plan", "done"],
+      renames: [],
+      refHits: [],
+      tokens: [],
+      warnings,
+    }
+  }
+
+  const excludes = loadExcludePaths(resolved)
+  const { allFiles, textFiles } = discoverFiles(resolved, batchSize, excludes)
+  const prune = effectivePrune(opts)
+
+  if (opts.prune && !opts.allowDeletes) {
+    warnings.push(
+      "POLICY: --prune ignored without --i-accept-deletes. Canon is create / update / rename only — never delete (see docs/file-lifecycle.md).",
+    )
+  }
+
   for (const m of MIGRATIONS) {
     if (m.kind === "file_rename") {
       const sources = findFilesNamed(allFiles, m.from)
       for (const fromRel of sources) {
-        const fromPath = join(resolved, fromRel)
+        if (isExcludedRel(fromRel, excludes)) {
+          warnings.push(`Skipped excluded path ${fromRel}`)
+          continue
+        }
         const toRel = join(dirname(fromRel), m.to).replace(/\\/g, "/")
         const toPath = join(resolved, toRel)
         if (existsSync(toPath)) {
-          if (opts.prune) {
+          const fromText = readTextFile(join(resolved, fromRel)) ?? ""
+          const toText = readTextFile(toPath) ?? ""
+          const fromHas = hasSubstance(fromText)
+          const toHas = hasSubstance(toText)
+
+          if (fromHas && toHas) {
+            renames.push({
+              migrationId: m.id,
+              fromPath: fromRel,
+              toPath: toRel,
+              mode: "skip_both_exist",
+            })
+            warnings.push(
+              `Both ${fromRel} and ${toRel} have substance — keep both; merge manually (never auto-delete)`,
+            )
+          } else if (fromHas && !toHas) {
+            // Promote only on apply (dryRun === false). Plan/dry-run never writes.
+            if (opts.dryRun === false) {
+              const backup = `${toRel}.replaced-backup`
+              try {
+                copyFileSync(toPath, join(resolved, backup))
+              } catch {
+                /* ignore */
+              }
+              writeFileSync(toPath, fromText, "utf-8")
+              warnings.push(`Promoted substance from ${fromRel} → ${toRel} (backup ${backup})`)
+            } else {
+              warnings.push(`Would promote substance from ${fromRel} → ${toRel}`)
+            }
+            // After promote, still never delete the legacy name unless allowDeletes
+            if (prune) {
+              renames.push({
+                migrationId: m.id,
+                fromPath: fromRel,
+                toPath: toRel,
+                mode: "target_exists_drop_source",
+              })
+            } else {
+              renames.push({
+                migrationId: m.id,
+                fromPath: fromRel,
+                toPath: toRel,
+                mode: "skip_both_exist",
+              })
+            }
+          } else if (prune) {
             renames.push({
               migrationId: m.id,
               fromPath: fromRel,
@@ -447,10 +636,11 @@ export function buildUpgradePlan(root: string, opts: UpgradeOptions = {}): Upgra
               mode: "skip_both_exist",
             })
             warnings.push(
-              `Both ${fromRel} and ${toRel} exist — will rewrite refs to ${m.to}; use --prune to remove legacy file`,
+              `Both ${fromRel} and ${toRel} exist — keep both; refs rewrite to ${m.to}. Do not use --prune; delete legacy by hand only if sure.`,
             )
           }
         } else {
+          // Legacy name only → rename (never copy+delete)
           renames.push({
             migrationId: m.id,
             fromPath: fromRel,
@@ -465,7 +655,10 @@ export function buildUpgradePlan(root: string, opts: UpgradeOptions = {}): Upgra
     if (!seenToken.has(key)) {
       seenToken.add(key)
       tokens.push({ from: m.from, to: m.to })
-      refHits.push(...scanTokenReferences(resolved, textFiles, m.from, m.to, batchSize))
+      const hits = scanTokenReferences(resolved, textFiles, m.from, m.to, batchSize).filter(
+        (h) => !isExcludedRel(h.file, excludes),
+      )
+      refHits.push(...hits)
     }
   }
 
@@ -549,21 +742,30 @@ function applyRefRewrites(
   plan: UpgradePlan,
   dryRun: boolean,
   batchSize: number,
-): string[] {
+): { updated: string[]; keptHistorical: string[] } {
   const updated: string[] = []
+  const keptHistorical: string[] = []
   const files = [...new Set(plan.refHits.map((h) => h.file))]
+  const excludes = loadExcludePaths(root)
 
   for (let i = 0; i < files.length; i += batchSize) {
     const batch = files.slice(i, i + batchSize)
     for (const rel of batch) {
+      if (isExcludedRel(rel, excludes)) continue
+
       // If this file was renamed in the same run, path may have changed
       let abs = join(root, rel)
+      let outRel = rel
       if (!existsSync(abs)) {
-        // Map through rename actions
         const mapped = plan.renames.find((r) => r.fromPath === rel && r.mode === "rename")
-        if (mapped) abs = join(root, mapped.toPath)
-        else continue
+        if (mapped) {
+          abs = join(root, mapped.toPath)
+          outRel = mapped.toPath
+        } else continue
       }
+
+      const base = basename(outRel)
+      const isDiary = CONTENT_SENSITIVE_DIARIES.has(base)
 
       let raw: string
       try {
@@ -571,9 +773,20 @@ function applyRefRewrites(
       } catch {
         continue
       }
+
+      if (isDiary) {
+        // Keep historical mentions of legacy names inside diaries (idempotent history)
+        for (const t of plan.tokens) {
+          if (raw.includes(t.from)) {
+            keptHistorical.push(`kept historical mention of ${t.from} in ${outRel}`)
+          }
+        }
+        continue
+      }
+
       const { content, changed } = replaceAllTokens(raw, plan.tokens)
       if (!changed) continue
-      const outRel = relative(root, abs).replace(/\\/g, "/")
+      outRel = relative(root, abs).replace(/\\/g, "/")
       if (dryRun) {
         updated.push(outRel)
         continue
@@ -583,7 +796,7 @@ function applyRefRewrites(
     }
   }
 
-  return updated
+  return { updated, keptHistorical }
 }
 
 function verifyUpgrade(root: string, plan: UpgradePlan): UpgradeReport["verify"] {
@@ -593,9 +806,21 @@ function verifyUpgrade(root: string, plan: UpgradePlan): UpgradeReport["verify"]
 
   const { allFiles, textFiles } = discoverFiles(root, 500)
 
+  // Intentional keep-both (rename-only policy): leftover legacy filenames are WARN, not FAIL
+  const skippedKeep = new Set(
+    plan.renames.filter((r) => r.mode === "skip_both_exist").map((r) => r.fromPath.replace(/\\/g, "/")),
+  )
+
   for (const name of legacyNames) {
     const still = findFilesNamed(allFiles, name)
-    for (const f of still) leftoverLegacy.push(f)
+    for (const f of still) {
+      const norm = f.replace(/\\/g, "/")
+      if (skippedKeep.has(norm) || skippedKeep.has(f)) {
+        messages.push(`warn: legacy file kept by policy (rename-only): ${f}`)
+        continue
+      }
+      leftoverLegacy.push(f)
+    }
   }
 
   let criticalTokenHits = 0
@@ -665,7 +890,7 @@ export function runUpgrade(targetDir: string, opts: UpgradeOptions = {}): Upgrad
   const phasesCompleted: UpgradePhase[] = []
 
   // Phase discover + plan
-  const plan = buildUpgradePlan(root, opts)
+  const plan = buildUpgradePlan(root, { ...opts, dryRun })
   phasesCompleted.push("discover", "plan")
 
   const applied = {
@@ -676,6 +901,27 @@ export function runUpgrade(targetDir: string, opts: UpgradeOptions = {}): Upgrad
     agentsRegenerated: false,
   }
 
+  // Toolkit root: no writes
+  if (plan.renames.length === 0 && plan.refHits.length === 0 && plan.warnings.some((w) => w.includes("toolkit itself"))) {
+    phasesCompleted.push("done")
+    const report: UpgradeReport = {
+      version: "1.1.0",
+      root,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      dryRun,
+      phasesCompleted,
+      plan,
+      applied,
+      verify: {
+        ok: true,
+        leftoverLegacy: [],
+        messages: ["Toolkit root — no auto-migration applied"],
+      },
+    }
+    return { report, plan }
+  }
+
   // Phase apply renames
   const renameResult = applyRenames(root, plan.renames, dryRun)
   applied.renames = renameResult.applied
@@ -684,11 +930,14 @@ export function runUpgrade(targetDir: string, opts: UpgradeOptions = {}): Upgrad
 
   // Phase apply refs (re-scan after renames so moved files get updates)
   if (!dryRun && plan.renames.some((r) => r.mode === "rename")) {
-    // Refresh ref hits on post-rename tree for tokens still present
-    const refreshed = buildUpgradePlan(root, { ...opts, prune: opts.prune })
+    const refreshed = buildUpgradePlan(root, { ...opts, prune: opts.prune, dryRun })
     plan.refHits = refreshed.refHits
   }
-  applied.filesUpdated = applyRefRewrites(root, plan, dryRun, batchSize)
+  const refResult = applyRefRewrites(root, plan, dryRun, batchSize)
+  applied.filesUpdated = refResult.updated
+  for (const msg of refResult.keptHistorical) {
+    if (!plan.warnings.includes(msg)) plan.warnings.push(msg)
+  }
   phasesCompleted.push("apply_refs")
 
   // Phase sync memory stubs to current canonical name
@@ -719,7 +968,12 @@ export function runUpgrade(targetDir: string, opts: UpgradeOptions = {}): Upgrad
     phasesCompleted.push("regenerate_agents")
   }
 
-  // Phase verify
+  // Retired paste file: once AGENTS.md exists (or was just regenerated), drop it
+  if (!dryRun && existsSync(join(root, "AGENTS.md"))) {
+    removeObsoleteStartPromptFile(root)
+  }
+
+  // Phase verify — diary leftovers are non-fatal (historical mentions kept on purpose)
   const verify = dryRun
     ? {
         ok: true,
@@ -730,7 +984,7 @@ export function runUpgrade(targetDir: string, opts: UpgradeOptions = {}): Upgrad
   phasesCompleted.push("verify", "done")
 
   const report: UpgradeReport = {
-    version: "1.0.0",
+    version: "1.1.0",
     root,
     startedAt,
     finishedAt: new Date().toISOString(),

@@ -262,6 +262,29 @@ function detectLayout(pkg: Record<string, unknown> | null, root: string): {
 
   if (existsSync(join(root, "docs"))) layoutHints.push("Docs folder: docs/")
   if (existsSync(join(root, "tests")) || existsSync(join(root, "test"))) layoutHints.push("Tests folder")
+
+  // Nested app layouts (monorepo / split stacks) — portable heuristics, not a closed list
+  const nestedRoots = ["backend", "frontend", "apps", "packages", "services", "api", "web", "server", "client"]
+  for (const name of nestedRoots) {
+    const nested = join(root, name)
+    if (!existsSync(nested)) continue
+    try {
+      if (!statSync(nested).isDirectory()) continue
+      layoutHints.push(`Nested layout: ${name}/`)
+      const nestedPkg = join(nested, "package.json")
+      if (existsSync(nestedPkg)) {
+        const nestedJson = readFileJSON(nestedPkg)
+        if (nestedJson?.scripts && typeof nestedJson.scripts === "object") {
+          const scripts = nestedJson.scripts as Record<string, unknown>
+          if (scripts.test) layoutHints.push(`${name}/ has test script`)
+          if (scripts.dev) layoutHints.push(`${name}/ has dev script`)
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const workspaces = pkg?.["workspaces"]
   if (Array.isArray(workspaces)) layoutHints.push(`Monorepo workspaces: ${workspaces.length}`)
 

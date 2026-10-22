@@ -117,6 +117,25 @@ export function extractPhases(text: string): string[] {
   return []
 }
 
+/** Slice the body of `## Phases` (exclusive of the next H2), or null if missing. */
+export function extractPhasesSectionBody(memory: string): string | null {
+  const startIdx = memory.search(/^## Phases\b/m)
+  if (startIdx < 0) return null
+  const afterHeading = memory.slice(startIdx + "## Phases".length)
+  const nextRel = afterHeading.search(/\n## /)
+  return nextRel < 0 ? afterHeading : afterHeading.slice(0, nextRel)
+}
+
+/**
+ * True when memory already has a real phase checklist under `## Phases`.
+ * Protects checkmarks and custom lists from being wiped by setup-all / plan-from.
+ */
+export function memoryHasPhaseChecklist(memory: string): boolean {
+  const body = extractPhasesSectionBody(memory)
+  if (body == null) return false
+  return /^\s*[-*]\s+\[[ xX]\]\s+\S+/m.test(body)
+}
+
 /** Replace or insert the ## Phases section (JS has no \\z end-anchor). */
 export function upsertPhasesSection(memory: string, phases: string[], ideaName: string): string {
   const checklist = phases.map((p) => `- [ ] ${p}`).join("\n")
@@ -147,8 +166,13 @@ export function upsertPhasesSection(memory: string, phases: string[], ideaName: 
  * Turn an idea/plan file into an ordered phase checklist in PROJECT_MEMORY.md.
  * Supports autonomous loop without coupling to the toolkit folder.
  * Skips unfilled templates so setup-all does not invent fake phases.
+ * If `## Phases` already has a checklist, leaves memory unchanged unless `force`.
  */
-export function planFromIdea(targetDir: string, ideaRelOrAbs: string): PlanFromResult {
+export function planFromIdea(
+  targetDir: string,
+  ideaRelOrAbs: string,
+  opts: { force?: boolean } = {},
+): PlanFromResult {
   const root = resolve(targetDir)
   const ideaPath = resolve(root, ideaRelOrAbs)
   if (!existsSync(ideaPath)) {
@@ -184,6 +208,17 @@ export function planFromIdea(targetDir: string, ideaRelOrAbs: string): PlanFromR
   }
 
   const prev = readTextFile(memoryPath) ?? ""
+  if (!opts.force && memoryHasPhaseChecklist(prev)) {
+    return {
+      ideaFile: ideaPath,
+      memoryFile: memoryPath,
+      phases: [],
+      skipped: true,
+      message:
+        `${CANONICAL_MEMORY_FILE} already has a ## Phases checklist — left unchanged (use plan-from --force to refresh)`,
+    }
+  }
+
   const next = upsertPhasesSection(prev, phases, basename(ideaPath))
   writeFileSync(memoryPath, next, "utf-8")
 

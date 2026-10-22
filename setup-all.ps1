@@ -38,13 +38,13 @@ if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
     Write-Host ""
 }
 
-Write-Host "  [0b/6] Update — checking for a newer toolkit version..." -ForegroundColor White
+Write-Host "  [0b/8] Update — checking for a newer toolkit version..." -ForegroundColor White
 Write-Host ""
 bun run src/cli.ts update .
 Write-Host ""
 
 if (-not (Test-Path "node_modules")) {
-    Write-Host "  [0/6] Installing toolkit dependencies..." -ForegroundColor White
+    Write-Host "  [0/8] Installing toolkit dependencies..." -ForegroundColor White
     bun install
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  [ERROR] Failed to install dependencies." -ForegroundColor Red
@@ -54,7 +54,17 @@ if (-not (Test-Path "node_modules")) {
     Write-Host ""
 }
 
-Write-Host "  [1/6] Init — detect stack, YAML, PROJECT_MEMORY.md..." -ForegroundColor White
+Write-Host "  [1/8] Verify — docs/scripts vs CLI surface..." -ForegroundColor White
+Write-Host ""
+bun run src/cli.ts verify .
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [FAIL] verify reported surface gaps — aborting setup." -ForegroundColor Red
+    Read-Host "  Press Enter to exit"
+    exit 1
+}
+Write-Host ""
+
+Write-Host "  [2/8] Init — detect stack, YAML, PROJECT_MEMORY.md..." -ForegroundColor White
 Write-Host ""
 bun run src/cli.ts init ..
 if ($LASTEXITCODE -ne 0) {
@@ -64,26 +74,31 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host ""
 
-Write-Host "  [2/6] Upgrade — migrate legacy names/refs..." -ForegroundColor White
+Write-Host "  [3/8] Upgrade — migrate legacy names/refs (no prune / no AGENTS rewrite)..." -ForegroundColor White
 Write-Host ""
-bun run src/cli.ts upgrade .. --dry-run | Out-Null
-bun run src/cli.ts upgrade .. --yes --prune
+bun run src/cli.ts upgrade .. --dry-run --skip-agents-regen | Out-Null
+bun run src/cli.ts upgrade .. --yes --skip-agents-regen
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [WARN] upgrade reported issues — continuing." -ForegroundColor Yellow
 }
 Write-Host ""
 
-Write-Host "  [3/6] Idea — ensure idea.md template if missing..." -ForegroundColor White
+Write-Host "  [4/8] Idea — ensure idea.md template if missing..." -ForegroundColor White
 Write-Host ""
 bun run src/cli.ts ensure-idea ..
 Write-Host ""
 
-# Paths relative to parent target (..) — first match only (Windows is case-insensitive)
-$ideaCandidates = @("idea.md", "plan.md", "PLAN.md", "idea.txt")
-$idea = $ideaCandidates | Where-Object { Test-Path (Join-Path ".." $_) } | Select-Object -First 1
+# Paths relative to parent target (..) — first match only; also accept *_Plan.md / *idea*
+$idea = $null
+Get-ChildItem -Path ".." -File -ErrorAction SilentlyContinue | ForEach-Object {
+    if ($idea) { return }
+    if ($_.Name -match '(?i)(^|[_-])(plan|idea)([_-]|\.|$)' -and $_.Extension -match '(?i)\.(md|txt)$') {
+        $idea = $_.Name
+    }
+}
 
 if ($idea) {
-    Write-Host "  [4/6] plan-from - phases from $idea..." -ForegroundColor White
+    Write-Host "  [5/8] plan-from - phases from $idea..." -ForegroundColor White
     Write-Host ""
     bun run src/cli.ts plan-from $idea ..
     if ($LASTEXITCODE -ne 0) {
@@ -91,27 +106,35 @@ if ($idea) {
     }
     Write-Host ""
 } else {
-    Write-Host "  [4/6] plan-from - skipped" -ForegroundColor Gray
+    Write-Host "  [5/8] plan-from - skipped" -ForegroundColor Gray
     Write-Host ""
 }
 
-Write-Host "  [5/6] Generate — AGENTS.md + adapters + start prompt..." -ForegroundColor White
+Write-Host "  [6/8] Generate — AGENTS.md + adapters (load AGENTS.md activates loop)..." -ForegroundColor White
 Write-Host ""
 if (-not (Test-Path "..\universal-agent.yaml")) {
     Write-Host "  [FAIL] universal-agent.yaml missing in parent after init." -ForegroundColor Red
     Read-Host "  Press Enter to exit"
     exit 1
 }
-bun run src/cli.ts generate ../universal-agent.yaml -o .. --force --adapters
+# AGENTS.md from YAML. Adapters: create missing only. Drops obsolete LOOP_START_PROMPT.txt.
+bun run src/cli.ts generate ../universal-agent.yaml -o .. --adapters
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [FAIL] generate failed." -ForegroundColor Red
     Read-Host "  Press Enter to exit"
     exit 1
 }
-bun run src/cli.ts write-prompt ..
 Write-Host ""
 
-Write-Host "  [6/6] Doctor — readiness check..." -ForegroundColor White
+Write-Host "  [7/8] Reconcile — AGENTS contract brief (WARN continues)..." -ForegroundColor White
+Write-Host ""
+bun run src/cli.ts reconcile ..
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [WARN] reconcile reported issues — continuing." -ForegroundColor Yellow
+}
+Write-Host ""
+
+Write-Host "  [8/8] Doctor — readiness check..." -ForegroundColor White
 Write-Host ""
 bun run src/cli.ts doctor ..
 $doctorExit = $LASTEXITCODE
@@ -122,27 +145,25 @@ Write-Host "   Done — 3 steps left for you" -ForegroundColor Cyan
 Write-Host "  ====================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Product files (PARENT folder):" -ForegroundColor White
-Write-Host "    AGENTS.md              load this in the AI chat"
+Write-Host "    AGENTS.md              load this — loop activates (no paste)"
 Write-Host "    PROJECT_MEMORY.md      portable memory / phases"
 Write-Host "    CHANGE_CONTROL.md     change register (row before code, docs before implementing)"
 Write-Host "    idea.md                edit your idea if needed"
-Write-Host "    LOOP_START_PROMPT.txt  copy-paste prompt"
 Write-Host "    universal-agent.yaml   config (re-run setup-all after edits)"
 Write-Host ""
 Write-Host "  YOUR 3 STEPS:" -ForegroundColor Green
 Write-Host "    1. Open the PARENT project in your AI editor"
-Write-Host "    2. Load / attach AGENTS.md"
-Write-Host "    3. Paste this prompt (also in LOOP_START_PROMPT.txt):"
+Write-Host "    2. Load / attach AGENTS.md (the loop activates automatically — no prompt to paste)"
+Write-Host "    3. Start implementing phase by phase"
 Write-Host ""
 Write-Host "  --------------------------------------------------------------------------" -ForegroundColor DarkGray
-if (Test-Path "..\LOOP_START_PROMPT.txt") {
-    Get-Content "..\LOOP_START_PROMPT.txt" | ForEach-Object { Write-Host "  $_" }
-} else {
-    Write-Host "  Load AGENTS.md. Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md. Implement phase by phase until done."
-}
-Write-Host "  --------------------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host ""
+Write-Host "  POLICY (docs/file-lifecycle.md): create if missing / update features / rename legacy — NEVER delete." -ForegroundColor Gray
+Write-Host "  Memory, CHANGE_CONTROL, idea, YAML, stamps: never wiped. Existing ## Phases checklist kept (no --force)." -ForegroundColor Gray
+Write-Host "  Adapters: create-if-missing. LOOP_START_PROMPT.txt is obsolete and removed on generate." -ForegroundColor Gray
+Write-Host "  AGENTS.md updates from YAML when content differs. upgrade: no --prune." -ForegroundColor Gray
 Write-Host "  Re-run setup-all after editing idea.md or universal-agent.yaml." -ForegroundColor Gray
+Write-Host "  --------------------------------------------------------------------------" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host ""
 if ($doctorExit -ne 0) {
     Write-Host "  [NOTE] doctor reported gaps — see tips above." -ForegroundColor Yellow

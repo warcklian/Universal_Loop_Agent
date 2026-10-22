@@ -90,6 +90,8 @@ multi_agent:
     file_locking: true
     auto_detect: true
     strategy: topological
+    lock_ttl_minutes: 30
+    locks_path: ".uagent/locks"
   orchestration:
     parallel: true
     shared_memory: "PROJECT_MEMORY.md"

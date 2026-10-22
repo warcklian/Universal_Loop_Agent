@@ -21,5 +21,7 @@ Plan: `Universal_Loop_Agent_Plan.md`. Index: `Index.md`.
 
 - core: `src/schema.ts`, `src/parser.ts`, `src/generator.ts`, `src/cli.ts`, `src/detector.ts`, `src/memory.ts`, `src/yaml-generator.ts`, `src/upgrade.ts`, `src/loop-defaults.ts`, `src/adapters.ts`, `src/adopt.ts`, `src/plan-from.ts`, `src/doctor.ts`
 - sections (integrator): `src/sections/**`
-- Prefer `uagent upgrade --dry-run` before applying migrations on existing projects.
+- Prefer `uagent upgrade --dry-run` then `uagent upgrade --yes` (never `--prune` in normal flows).
+- File lifecycle canon (`docs/file-lifecycle.md`): create if missing → update features in place → rename legacy names → **never delete**.
+- Multi-agent: `docs/multi-agent-coordination.md` — coord:register/claim/lock before editing a phase (mandatory in AGENTS).
 - Consumer products must not couple to this toolkit folder; product owns PROJECT_MEMORY.md / AGENTS.md / universal-agent.yaml / .uagent/memory / optional adapters.

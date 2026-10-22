@@ -1,7 +1,10 @@
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { copyFileSync, existsSync, unlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { readTextFile } from "./fs-util.ts"
+
+/** Retired artefact — loop activates by loading AGENTS.md alone. */
+export const OBSOLETE_START_PROMPT_FILE = "LOOP_START_PROMPT.txt"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -73,36 +76,16 @@ export function ensureIdeaFile(targetDir: string): EnsureIdeaResult {
   }
 }
 
-/** Prompt users paste into the AI chat after setup-all. */
-export function loopStartPrompt(): string {
-  return [
-    "Load AGENTS.md (loop mode).",
-    "Read PROJECT_MEMORY.md, CHANGE_CONTROL.md and idea.md (or the plan).",
-    "Implement the project phase by phase until all phases are done.",
-    "For each phase: implement → run tests/checks → mark the phase done in PROJECT_MEMORY.md → continue to the next phase.",
-    "Change control: before implementing an authorized change, add its row to CHANGE_CONTROL.md and update the documentation in detail.",
-    "Do not ask me to say continue between successful phases.",
-    "Only stop if blocked (secrets, irreversible action, real ambiguity, or doom-loop).",
-    "If this chat is a resume: do not redo completed phases; continue from the first unchecked phase in PROJECT_MEMORY.md.",
-  ].join(" ")
-}
-
-export function writeStartPromptFile(targetDir: string): string {
-  const root = resolve(targetDir)
-  const out = join(root, "LOOP_START_PROMPT.txt")
-  const body = [
-    "# Copy everything below into your AI chat after loading AGENTS.md",
-    "",
-    loopStartPrompt(),
-    "",
-    "# Reminder — local change control:",
-    "#   1. Register the change in CHANGE_CONTROL.md (ID, date, scope, status authorized).",
-    "#   2. Update the documentation in detail (what, why, files, steps, acceptance criteria, how to verify).",
-    "#   3. Then implement; close the row (implemented → verified) when checks pass.",
-    "",
-  ].join("\n")
-  writeFileSync(out, body, "utf-8")
-  return out
+/**
+ * Remove obsolete `LOOP_START_PROMPT.txt` if present.
+ * Loading AGENTS.md is enough to activate the loop — do not recreate this file.
+ * @returns true when a file was deleted
+ */
+export function removeObsoleteStartPromptFile(targetDir: string): boolean {
+  const path = join(resolve(targetDir), OBSOLETE_START_PROMPT_FILE)
+  if (!existsSync(path)) return false
+  unlinkSync(path)
+  return true
 }
 
 export function readTemplatePreview(): string {
